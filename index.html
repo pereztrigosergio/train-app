@@ -195,6 +195,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 select{background:rgba(255,255,255,0.85);border:0.5px solid var(--bd);border-radius:9px;color:var(--t);font-size:11px;padding:5px 8px;cursor:pointer;font-family:-apple-system,sans-serif;box-shadow:var(--shadow)}
 </style>
 <script>
+window.onerror=function(msg,src,line){
+  var c=document.getElementById('cnt');
+  if(c)c.innerHTML='<div style="padding:30px;font-family:-apple-system,sans-serif;text-align:center"><h3>Error</h3><p>'+msg+'</p><p style="font-size:11px;color:#999">Line: '+line+'</p><button onclick="localStorage.clear();location.reload()" style="background:#007AFF;color:#fff;border:none;padding:12px 24px;border-radius:12px;font-size:14px;cursor:pointer">Reiniciar</button></div>';
+  return false;
+};
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/train-app/sw.js').then(reg=>{
@@ -272,7 +277,7 @@ function applyUpdate(){
       <div id="hdr"></div>
     </div>
   </div>
-  <div id="cnt" class="au"></div>
+  <div id="cnt" class="au"><div style="padding:40px;text-align:center;font-family:-apple-system,sans-serif;color:#999">Cargando...</div></div>
 
 <!-- HIIT TIMER OVERLAY -->
 <div id="timer-overlay">
