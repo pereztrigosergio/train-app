@@ -1,0 +1,19 @@
+{
+  "name": "Train.",
+  "short_name": "Train.",
+  "description": "Tu programa de entrenamiento personalizado",
+  "start_url": "/train-app/",
+  "scope": "/train-app/",
+  "display": "standalone",
+  "background_color": "#F2F3F8",
+  "theme_color": "#F2F3F8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
