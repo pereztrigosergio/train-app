@@ -197,11 +197,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 select{background:rgba(255,255,255,0.85);border:0.5px solid var(--bd);border-radius:9px;color:var(--t);font-size:11px;padding:5px 8px;cursor:pointer;font-family:-apple-system,sans-serif;box-shadow:var(--shadow)}
 </style>
 <script>
-window.onerror=function(msg,src,line){
-  var c=document.getElementById('cnt');
-  if(c)c.innerHTML='<div style="padding:30px;font-family:-apple-system,sans-serif;text-align:center"><h3>Error</h3><p>'+msg+'</p><p style="font-size:11px;color:#999">Line: '+line+'</p><button onclick="localStorage.clear();location.reload()" style="background:#007AFF;color:#fff;border:none;padding:12px 24px;border-radius:12px;font-size:14px;cursor:pointer">Reiniciar</button></div>';
-  return false;
-};
+
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/train-app/sw.js').then(reg=>{
@@ -228,27 +224,13 @@ function applyUpdate(){
 </script>
 </head>
 <body>
-<div id="app">
+<div id="app" style="min-height:100vh;background:#F2F3F8;font-family:-apple-system,sans-serif">
   <!-- Update banner -->
   <div id="update-banner" style="display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:999;background:#007AFF;color:#fff;padding:calc(var(--st) + 10px) 16px 10px;align-items:center;justify-content:space-between;gap:10px;">
     <div style="font-size:13px;font-weight:600">Nueva version disponible</div>
     <button onclick="applyUpdate()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">Actualizar</button>
   </div>
-  <div id="reload-btn" style="position:fixed;bottom:20px;right:16px;z-index:9999;display:none">
-    <button onclick="window.location.reload(true)" style="background:#007AFF;color:#fff;border:none;border-radius:50px;padding:10px 18px;font-size:13px;font-weight:700;font-family:-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,122,255,0.4);cursor:pointer">↺ Actualizar</button>
-  </div>
-  <script>
-    // Show reload button if app doesn't load within 2 seconds
-    setTimeout(function(){
-      var app=document.getElementById("app");
-      var cnt=document.getElementById("cnt");
-      if(!cnt||cnt.innerHTML.trim()===""){
-        document.getElementById("reload-btn").style.display="block";
-      }
-    }, 2000);
-  </script>
-    <button onclick="applyUpdate()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:-apple-system,sans-serif;white-space:nowrap">Actualizar</button>
-  </div>
+
   <div id="swipe-indicator"></div>
   <button id="fab" onclick="toggleSportMenu()" title="Registrar deporte">+</button>
   <div id="sport-menu" id="sport-menu">
@@ -279,7 +261,16 @@ function applyUpdate(){
       <div id="hdr"></div>
     </div>
   </div>
-  <div id="cnt" class="au"><div style="padding:40px;text-align:center;font-family:-apple-system,sans-serif;color:#999">Cargando...</div></div>
+  <div id="cnt" class="au" style="padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1C1C1E;display:block">
+  <div style="font-size:12px;color:#8E8E93;text-transform:uppercase;font-weight:700;letter-spacing:.06em;padding:8px 4px 6px">Hoy</div>
+  <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Train. v2.8</div>
+    <div style="font-size:13px;color:#8E8E93">Cargando tu sesion...</div>
+  </div>
+</div>
+    <div style="font-size:13px;color:#8E8E93">Un momento...</div>
+  </div>
+</div>
 
 <!-- HIIT TIMER OVERLAY -->
 <div id="timer-overlay">
@@ -337,7 +328,7 @@ function applyUpdate(){
     </div>
   </div>
 </div>
-  <div id="tb" style="display:none">
+  <div id="tb" style="display:none;position:fixed;bottom:0;left:0;right:0;max-width:430px;margin:0 auto">
     <button class="tbb on" onclick="go('hoy')" id="tb-hoy"><span style="">🏠</span><span>Hoy</span></button>
     <button class="tbb" onclick="go('sem')" id="tb-sem"><span style="">📅</span><span>Semana</span></button>
     <button class="tbb" onclick="go('mob')" id="tb-mob"><span style="">☀️</span><span>Movilidad</span></button>
