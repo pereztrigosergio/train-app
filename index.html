@@ -9,10 +9,11 @@
 <meta name="theme-color" content="#F2F3F8">
 <meta name="app-version" content="2.1">
 <title>Train.</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
 <style>
-html,body{height:100%;margin:0;padding:0;}
+html{height:100%;}
 :root{
   --bg:#F2F3F8;--bg2:#FFFFFF;--bg3:#E8EAF2;
   --g:rgba(255,255,255,0.72);--g2:rgba(255,255,255,0.92);
@@ -25,9 +26,9 @@ html,body{height:100%;margin:0;padding:0;}
   --st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:var(--bg)}
+html,body{height:100%;background:#F2F3F8;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;color:var(--t)}
-#app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;position:relative;overflow:hidden;background:var(--bg)}
+#app{display:flex;flex-direction:column;min-height:100vh;max-width:430px;margin:0 auto;position:relative;background:#F2F3F8}
 .b1,.b2,.b3{position:absolute;border-radius:50%;pointer-events:none;z-index:0}
 .b1{width:300px;height:300px;background:rgba(0,122,255,0.07);top:-120px;left:-80px;filter:blur(90px)}
 .b2{width:240px;height:240px;background:rgba(175,82,222,0.05);bottom:60px;right:-70px;filter:blur(80px)}
@@ -38,7 +39,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 .wp{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
 .wpn{background:rgba(0,122,255,0.1);color:var(--bl);border:0.5px solid rgba(0,122,255,0.2)}
 .wpl{background:rgba(255,159,10,0.12);color:var(--ye);border:0.5px solid rgba(255,159,10,0.25)}
-#cnt{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 12px 12px;position:relative;z-index:1;-webkit-overflow-scrolling:touch}
+#cnt{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 12px 80px;position:relative;z-index:1;-webkit-overflow-scrolling:touch;min-height:200px}
 #cnt::-webkit-scrollbar{display:none}
 #tb{flex-shrink:0;position:relative;z-index:10;background:rgba(242,243,248,0.88);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-top:0.5px solid var(--bd);display:flex;padding-bottom:var(--sb)}
 .tbb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;padding:8px 2px 9px;transition:all .2s;color:var(--t3)}
@@ -261,7 +262,7 @@ function applyUpdate(){
           <div id="cal-modal-title" style="font-size:17px;font-weight:800"></div>
           <div id="cal-modal-sub" style="font-size:12px;color:var(--t3);margin-top:2px"></div>
         </div>
-        <button class="cal-modal-close" onclick="closeCalModal()"><i class="ti ti-x"></i></button>
+        <button class="cal-modal-close" onclick="closeCalModal()"><span style="">✕</span></button>
       </div>
       <div id="cal-modal-body"></div>
     </div>
@@ -284,7 +285,7 @@ function applyUpdate(){
 <div id="timer-overlay">
   <div class="tim-hd">
     <div style="font-size:17px;font-weight:800">Temporizador HIIT</div>
-    <button class="tim-close" onclick="closeTimer()"><i class="ti ti-x"></i></button>
+    <button class="tim-close" onclick="closeTimer()"><span style="">✕</span></button>
   </div>
   <div id="tim-setup" class="tim-body">
     <div class="slbl">Tiempo</div>
@@ -307,7 +308,7 @@ function applyUpdate(){
     <div class="card gl" style="padding:12px 14px;margin-bottom:9px">
       <div class="ex-inputs" id="ex-inputs"></div>
     </div>
-    <button class="btn btnb" onclick="startTimer()" style="margin-top:4px"><i class="ti ti-player-play" style="vertical-align:-2px;margin-right:6px"></i>Iniciar</button>
+    <button class="btn btnb" onclick="startTimer()" style="margin-top:4px"><span style="vertical-align:-2px;margin-right:6px">▶</span>Iniciar</button>
   </div>
   <div id="tim-running" style="display:none;flex-direction:column;flex:1;padding:20px 16px;align-items:center;justify-content:space-between">
     <div style="width:100%">
@@ -329,19 +330,19 @@ function applyUpdate(){
     <div style="width:100%">
       <div class="tim-info-row" id="tim-info-row"></div>
       <div class="tim-controls">
-        <button class="tim-ctrl back" onclick="timerBack()"><i class="ti ti-skip-back"></i></button>
-        <button class="tim-ctrl play" id="tim-playbtn" onclick="togglePause()"><i class="ti ti-player-pause"></i></button>
-        <button class="tim-ctrl stop" onclick="stopTimer()"><i class="ti ti-player-stop"></i></button>
+        <button class="tim-ctrl back" onclick="timerBack()"><span></span></button>
+        <button class="tim-ctrl play" id="tim-playbtn" onclick="togglePause()"><span style="">⏸</span></button>
+        <button class="tim-ctrl stop" onclick="stopTimer()"><span style="">⏹</span></button>
       </div>
     </div>
   </div>
 </div>
   <div id="tb" style="display:none">
-    <button class="tbb on" onclick="go('hoy')" id="tb-hoy"><i class="ti ti-home"></i><span>Hoy</span></button>
-    <button class="tbb" onclick="go('sem')" id="tb-sem"><i class="ti ti-calendar-week"></i><span>Semana</span></button>
-    <button class="tbb" onclick="go('mob')" id="tb-mob"><i class="ti ti-sun-high"></i><span>Movilidad</span></button>
-    <button class="tbb" onclick="go('prog')" id="tb-prog"><i class="ti ti-chart-dots"></i><span>Progreso</span></button>
-    <button class="tbb" onclick="go('cfg')" id="tb-cfg"><i class="ti ti-adjustments-horizontal"></i><span>Ajustes</span></button>
+    <button class="tbb on" onclick="go('hoy')" id="tb-hoy"><span style="">🏠</span><span>Hoy</span></button>
+    <button class="tbb" onclick="go('sem')" id="tb-sem"><span style="">📅</span><span>Semana</span></button>
+    <button class="tbb" onclick="go('mob')" id="tb-mob"><span style="">☀️</span><span>Movilidad</span></button>
+    <button class="tbb" onclick="go('prog')" id="tb-prog"><span style="">📊</span><span>Progreso</span></button>
+    <button class="tbb" onclick="go('cfg')" id="tb-cfg"><span style="">⚙️</span><span>Ajustes</span></button>
   </div>
 </div>
 <script>
@@ -1071,20 +1072,20 @@ function rSessionExs(sk,done_set,interactive){
   if(isHi){
     const hn=HN[ST.week-1].split(" · ");
     h+='<div class="hnote" style="line-height:1.8">'
-      +'<div style="font-weight:700;margin-bottom:3px"><i class="ti ti-repeat" style="vertical-align:-2px;margin-right:5px"></i>Circuito por intervalos · Semana '+ST.week+'</div>'
+      +'<div style="font-weight:700;margin-bottom:3px"><span style="vertical-align:-2px;margin-right:5px">🔄</span>Circuito por intervalos · Semana '+ST.week+'</div>'
       +hn.map(function(l){return '<div style="font-size:11px">· '+l+'</div>';}).join("")
       +'<div style="font-size:11px;margin-top:4px;color:rgba(255,107,53,0.7)">Ejercicios aleatorios esta semana. Cambia en Ajustes.</div>'
       +'</div>'
       +'<div style="display:flex;gap:8px;margin-bottom:9px">'
-      +'<button onclick="openTimerFromHiit()" style="flex:1;padding:12px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF3B30,#FF6B35);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif"><i class="ti ti-timer" style="vertical-align:-2px;margin-right:5px"></i>Temporizador</button>'
-      +'<button onclick="showHiitCustomizerFull()" style="padding:12px 16px;border-radius:14px;border:0.5px solid var(--bd);background:rgba(255,255,255,0.85);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif"><i class="ti ti-adjustments" style="vertical-align:-2px"></i></button>'
+      +'<button onclick="openTimerFromHiit()" style="flex:1;padding:12px;border-radius:14px;border:none;background:linear-gradient(135deg,#FF3B30,#FF6B35);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif"><span style="vertical-align:-2px;margin-right:5px">⏱</span>Temporizador</button>'
+      +'<button onclick="showHiitCustomizerFull()" style="padding:12px 16px;border-radius:14px;border:0.5px solid var(--bd);background:rgba(255,255,255,0.85);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif"><span style="vertical-align:-2px">⚙</span></button>'
       +'</div>';
   }
   // Get exercises filtered by week
   const exList=getSessionExs(sk);
   let coreStarted=false;
   exList.forEach((ex)=>{
-    if(ex.isCore&&!coreStarted){coreStarted=true;h+=`<div class="core-sep"><div class="core-sep-line"></div><div class="core-sep-label"><i class="ti ti-target" style="vertical-align:-2px;font-size:10px;margin-right:3px"></i>Core Finisher</div><div class="core-sep-line"></div></div>`;}
+    if(ex.isCore&&!coreStarted){coreStarted=true;h+=`<div class="core-sep"><div class="core-sep-line"></div><div class="core-sep-label"><span style="vertical-align:-2px;font-size:10px;margin-right:3px">🎯</span>Core Finisher</div><div class="core-sep-line"></div></div>`;}
     const done=done_set&&done_set.has(ex.id);const open=ST.xopen[ex.id];
     const oc=interactive?`onclick="tapEx('${ex.id}','${sk}')" `:"";
     h+=`<div class="exc gl ${done?"ok":""}" ${oc}>
@@ -1095,12 +1096,12 @@ function rSessionExs(sk,done_set,interactive){
           <div class="xr" style="color:${sm.c}">${ex.week.s>1?ex.week.s+"x":""}${ex.week.r}</div>
         </div>
         <div>${xtag(ex.pat,sm.bg,sm.c)}${xtag(ex.mat,"rgba(0,0,0,0.05)","var(--t3)")}</div>
-        <div class="xrest"><i class="ti ti-clock" style="font-size:11px;color:var(--t3)"></i><span>${fmtRest(ex.rest)} descanso</span></div>
+        <div class="xrest"><span style="font-size:11px;color:var(--t3)">⏱</span><span>${fmtRest(ex.rest)} descanso</span></div>
         <div class="xd ${open?"v":""}">${ex.desc}</div>
-        <div class="xtp ${open?"v":""}"><i class="ti ti-bulb" style="vertical-align:-2px;font-size:11px;margin-right:3px"></i>${ex.tip}</div>
+        <div class="xtp ${open?"v":""}"><span style="vertical-align:-2px;font-size:11px;margin-right:3px">💡</span>${ex.tip}</div>
         ${interactive?`<button onclick="event.stopPropagation();toggleInfo('${ex.id}')" style="background:none;border:none;color:var(--bl);font-size:11px;cursor:pointer;padding:2px 0 0;font-family:-apple-system,sans-serif">${open?"▲ Ocultar":"▼ Ver descripcion"}</button>`:""}
       </div>
-      ${interactive?`<div class="chk ${done?"ok":""}"><i class="ti ti-check"></i></div>`:""}
+      ${interactive?`<div class="chk ${done?"ok":""}"><span style="">✓</span></div>`:""}
     </div>`;
   });
   return h;
@@ -1120,7 +1121,7 @@ function rHoy(){
       const rcDone=rcExs.filter(function(e){return ST.done.has("rc_"+e.id);}).length;
       const rcPct=Math.round(rcDone/rcExs.length*100);
       var rcH='<button class="back-btn" onclick="localStorage.removeItem(\'rc_active_'+tstr+'\');ST.done=new Set();sH(rTab(),false)">'
-        +'<i class="ti ti-arrow-left"></i>Volver a descanso</button>';
+        +'<span style="">←</span>Volver a descanso</button>';
       if(rcFocus==="back_pain"){
         rcH+='<div style="background:rgba(255,59,48,0.07);border:0.5px solid rgba(255,59,48,0.2);border-radius:14px;padding:11px 13px;margin-bottom:9px;font-size:12px;color:var(--re);line-height:1.6">'
           +'<div style="font-weight:700;margin-bottom:4px">⚠️ Aviso de seguridad</div>'
@@ -1131,7 +1132,7 @@ function rHoy(){
       }
       rcH+='<div class="card gls" style="padding:13px 14px;margin-bottom:9px;background:rgba(52,199,89,0.07);border-color:#34C75922">'
         +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
-        +'<i class="ti ti-heart-rate-monitor" style="font-size:22px;color:var(--gr)"></i>'
+        +'<span style="font-size:22px;color:var(--gr)">💚</span>'
         +'<div><div style="font-size:15px;font-weight:800">Recuperacion activa</div>'
         +'<div style="font-size:11px;color:var(--t3)">'+rcExs.length+' ejercicios · Descanso activo</div></div></div>'
         +'<div style="display:flex;justify-content:space-between;margin-bottom:4px">'
@@ -1153,15 +1154,15 @@ function rHoy(){
         var did=ST.done.has("rc_"+ex.id);
         var oc="tapRcEx('rc_"+ex.id+"')";
         rcH+='<div class="exc gl '+(did?"ok":"")+ '" onclick="'+oc+'">'
-          +'<div class="eil" style="color:var(--gr);background:rgba(52,199,89,0.1)"><i class="ti ti-heart-rate-monitor" style="font-size:18px"></i></div>'
+          +'<div class="eil" style="color:var(--gr);background:rgba(52,199,89,0.1)"><span style="font-size:18px">💚</span></div>'
           +'<div style="flex:1">'
           +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:5px">'
           +'<div class="xn '+(did?"ok":"")+'">'+ex.n+'</div>'
           +'<div class="xr" style="color:var(--gr)">'+ex.r+'</div></div>'
           +'<div style="font-size:11px;color:var(--t3);margin-top:4px;line-height:1.55">'+ex.desc+'</div>'
-          +'<div style="font-size:11px;color:rgba(52,199,89,0.8);margin-top:3px"><i class="ti ti-bulb" style="vertical-align:-2px;font-size:11px;margin-right:3px"></i>'+ex.tip+'</div>'
+          +'<div style="font-size:11px;color:rgba(52,199,89,0.8);margin-top:3px"><span style="vertical-align:-2px;font-size:11px;margin-right:3px">💡</span>'+ex.tip+'</div>'
           +'</div>'
-          +'<div class="chk '+(did?"ok":"")+'"><i class="ti ti-check"></i></div>'
+          +'<div class="chk '+(did?"ok":"")+'"><span style="">✓</span></div>'
           +'</div>';
       });
       // Complete recovery button
@@ -1174,8 +1175,8 @@ function rHoy(){
       +'<div style="font-size:20px;font-weight:800;margin-bottom:8px">Dia de descanso</div>'
       +'<div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:18px">El descanso es donde el cuerpo crece.<br>Recupera hoy y vuelves mas fuerte mañana.</div>'
       +'<button class="btn btng" onclick="go(&quot;mob&quot;)" style="max-width:280px;margin:0 auto 10px">Ver movilidad</button>'
-      +'<button class="btn btng" onclick="startRecovery()" style="max-width:280px;margin:0 auto 10px;background:rgba(52,199,89,0.1);border-color:rgba(52,199,89,0.3);color:#1a7a38"><i class="ti ti-heart-rate-monitor" style="vertical-align:-2px;margin-right:6px"></i>Sesion de recuperacion activa</button>'
-      +(isSunday?'<button class="btn btnb" onclick="showWeeklySummary()" style="max-width:280px;margin:0 auto"><i class="ti ti-chart-bar" style="vertical-align:-2px;margin-right:6px"></i>Ver resumen semanal</button>':"")
+      +'<button class="btn btng" onclick="startRecovery()" style="max-width:280px;margin:0 auto 10px;background:rgba(52,199,89,0.1);border-color:rgba(52,199,89,0.3);color:#1a7a38"><span style="vertical-align:-2px;margin-right:6px">💚</span>Sesion de recuperacion activa</button>'
+      +(isSunday?'<button class="btn btnb" onclick="showWeeklySummary()" style="max-width:280px;margin:0 auto"><span style="vertical-align:-2px;margin-right:6px">📊</span>Ver resumen semanal</button>':"")
       +'</div>';
   }
   const sm=SM[sk];
@@ -1193,19 +1194,19 @@ function rHoy(){
   const comp=storedCount>=0&&storedCount<=total?storedCount:cleanDone.size;
   const pct=total?Math.round(comp/total*100):0;const tsport=ST.sport[tstr];
   let h=`<div class="card gl" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer" onclick="go('mob')">
-    <i class="ti ti-sun-high" style="font-size:20px;color:var(--gr)"></i>
+    <span style="font-size:20px;color:var(--gr)">☀️</span>
     <div style="flex:1"><div style="font-size:13px;font-weight:600">Movilidad matutina</div><div style="font-size:11px;color:var(--t3)">8 ejercicios · siempre la misma</div></div>
-    <i class="ti ti-chevron-right" style="color:var(--t3);font-size:15px"></i>
+    <span style="color:var(--t3);font-size:15px">›</span>
   </div>
   <div class="card gl" style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer" onclick="go('relax')">
-    <i class="ti ti-spine" style="font-size:20px;color:var(--or)"></i>
+    <span style="font-size:20px;color:var(--or)">🧘</span>
     <div style="flex:1"><div style="font-size:13px;font-weight:600">Relax lumbar</div><div style="font-size:11px;color:var(--t3)">6 ejercicios · cuando lo necesites</div></div>
-    <i class="ti ti-chevron-right" style="color:var(--t3);font-size:15px"></i>
+    <span style="color:var(--t3);font-size:15px">›</span>
   </div>
   <div class="card gls" style="padding:13px 14px;margin-bottom:8px;background:${sm.bg};border-color:${sm.c}22">
-    ${ST.week===4?`<div class="hnote" style="background:rgba(255,159,10,0.1);border-color:rgba(255,159,10,0.25);color:#9a5f00;margin-bottom:9px"><i class="ti ti-moon" style="vertical-align:-2px;margin-right:5px"></i><strong>Semana de descarga</strong> — Reduce el volumen intencionadamente. El cuerpo asimila aqui todo el trabajo de las 3 semanas anteriores.</div>`:""}
+    ${ST.week===4?`<div class="hnote" style="background:rgba(255,159,10,0.1);border-color:rgba(255,159,10,0.25);color:#9a5f00;margin-bottom:9px"><span style="vertical-align:-2px;margin-right:5px">🌙</span><strong>Semana de descarga</strong> — Reduce el volumen intencionadamente. El cuerpo asimila aqui todo el trabajo de las 3 semanas anteriores.</div>`:""}
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
-      <i class="ti ${sm.ico}" style="font-size:24px;color:${sm.c}"></i>
+      <span></span>
       <div><div style="font-size:16px;font-weight:800">${sm.l}</div><div style="font-size:11px;color:var(--t3)">${exList.length} ejercicios · ${DNAMES[sidx]}</div></div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><span style="font-size:12px;color:var(--t3)">Progreso de hoy</span><span style="font-size:12px;font-weight:700;color:${sm.c}">${comp}/${total}</span></div>
@@ -1216,7 +1217,7 @@ function rHoy(){
     h+=`<div style="margin-bottom:8px"><div class="slbl">Deporte hoy</div><div style="display:flex;gap:6px;flex-wrap:wrap">
     ${SPORTS.map(sp=>`<button class="sp-btn ${tsport===sp?"on":""}" onclick="logSport('${tstr}','${sp}')">${sp}</button>`).join("")}
     ${tsport?`<button class="sp-btn" onclick="logSport('${tstr}','')">Quitar</button>`:""}
-    </div>${tsport?`<div style="font-size:12px;color:var(--gr);margin-top:7px;font-weight:600"><i class="ti ti-check" style="vertical-align:-2px;margin-right:4px"></i>${tsport} registrado — HIIT cubierto</div>`:""}</div>`;
+    </div>${tsport?`<div style="font-size:12px;color:var(--gr);margin-top:7px;font-weight:600"><span style="vertical-align:-2px;margin-right:4px">✓</span>${tsport} registrado — HIIT cubierto</div>`:""}</div>`;
   }
   h+=`<div class="slbl">Ejercicios</div>${rSessionExs(sk,ST.done,true)}`;
 
@@ -1235,14 +1236,14 @@ function rHoy(){
     <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.06em">¿Necesitas ajustar hoy?</div>
     <div class="adj-row">
       <button class="adj-btn ${isFree?"done":""}" onclick="markFree()">
-        <i class="ti ti-${isFree?"check":"barbell"}" style="font-size:16px;display:block;margin-bottom:3px"></i>
+        <span></span>
         ${isFree?"Sesion libre registrada":"Entrenamiento libre"}
       </button>
       ${canPostpone?`<button class="adj-btn ${isPostponed?"warn":""}" onclick="postponeDay()">
-        <i class="ti ti-${isPostponed?"rotate":"calendar-plus"}" style="font-size:16px;display:block;margin-bottom:3px"></i>
+        <span></span>
         ${isPostponed?"Deshacer posponer":postponeLabel}
       </button>`:`<button class="adj-btn" style="opacity:.35;cursor:not-allowed">
-        <i class="ti ti-calendar-off" style="font-size:16px;display:block;margin-bottom:3px"></i>
+        <span style="font-size:16px;display:block;margin-bottom:3px">❌</span>
         Ultimo dia
       </button>`}
     </div>
@@ -1279,7 +1280,7 @@ function rSem(){
       +'<div style="font-size:13px;font-weight:600">'+DNAMES[i]+todayBadge+'</div>'
       +'<div style="font-size:11px;color:var(--t3);margin-top:1px">'+(sm?sm.l:"Descanso")+'</div></div>'
       +'<button onclick="'+editOc+'" style="width:30px;height:30px;border-radius:9px;border:0.5px solid var(--bd);background:rgba(255,255,255,0.85);color:var(--t3);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);flex-shrink:0">'
-      +'<i class="ti ti-pencil"></i></button>'
+      +'<span style="">✏</span></button>'
       +'</div>';
   }
   return h;
@@ -1287,12 +1288,12 @@ function rSem(){
 function showDay(i){NAV_HISTORY.push({tab:ST.tab,dayView:ST.dayView});animateNav('forward');ST.dayView=i;sH(rTab(),false);}
 function rDayDetail(i){
   const sk=ST.sched[i];const sm=sk?SM[sk]:null;
-  if(!sk)return`<button class="back-btn" onclick="ST.dayView=null;sH(rTab(),false)"><i class="ti ti-arrow-left"></i>Semana</button>
+  if(!sk)return`<button class="back-btn" onclick="ST.dayView=null;sH(rTab(),false)"><span style="">←</span>Semana</button>
     <div class="card gls" style="text-align:center;padding:24px 14px"><div style="font-size:32px;margin-bottom:10px">🌙</div><div style="font-size:16px;font-weight:700">${DNAMES[i]}</div><div style="font-size:13px;color:var(--t2);margin-top:6px">Dia de descanso</div></div>`;
-  return`<button class="back-btn" onclick="ST.dayView=null;sH(rTab(),false)"><i class="ti ti-arrow-left"></i>Semana</button>
+  return`<button class="back-btn" onclick="ST.dayView=null;sH(rTab(),false)"><span style="">←</span>Semana</button>
     <div class="card gls" style="padding:12px 14px;margin-bottom:9px;background:${sm.bg};border-color:${sm.c}22">
       <div style="display:flex;align-items:center;gap:9px">
-        <i class="ti ${sm.ico}" style="font-size:22px;color:${sm.c}"></i>
+        <span></span>
         <div><div style="font-size:15px;font-weight:800">${DNAMES[i]} — ${sm.l}</div><div style="font-size:11px;color:var(--t3)">${SESS[sk].length} ejercicios · Semana ${ST.week}</div></div>
       </div>
     </div>
@@ -1318,14 +1319,14 @@ function rRelax(){
   RELAX_LUMBAR.forEach(function(ex){
     var ok=ST.mdone.has("rx_"+ex.id);
     h+='<div class="mobe gl '+(ok?"ok":"")+'" onclick="tapRelax(\"rx_'+ex.id+'\")">'
-      +'<div class="mobn '+(ok?"ok":"")+'"><i class="ti ti-spine" style="font-size:12px"></i></div>'
+      +'<div class="mobn '+(ok?"ok":"")+'"><span style="font-size:12px">🧘</span></div>'
       +'<div style="flex:1">'
       +'<div style="display:flex;justify-content:space-between;align-items:center">'
       +'<div style="font-size:13px;font-weight:600;color:'+(ok?"#1a7a38":"var(--t)")+'">'+ex.n+'</div>'
       +'<div style="font-size:13px;font-weight:700;color:var(--or);white-space:nowrap;padding-left:8px">'+ex.r+'</div>'
       +'</div>'
       +'<div style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.55">'+ex.desc+'</div>'
-      +'<div style="font-size:11px;color:rgba(255,107,53,0.8);margin-top:3px"><i class="ti ti-bulb" style="vertical-align:-2px;font-size:11px;margin-right:3px"></i>'+ex.tip+'</div>'
+      +'<div style="font-size:11px;color:rgba(255,107,53,0.8);margin-top:3px"><span style="vertical-align:-2px;font-size:11px;margin-right:3px">💡</span>'+ex.tip+'</div>'
       +'</div>'
       +'</div>';
   });
@@ -1369,7 +1370,7 @@ function rMob(){
           <div style="font-size:13px;font-weight:700;color:var(--gr);white-space:nowrap;padding-left:8px">${m.r}</div>
         </div>
         <div style="font-size:11px;color:var(--t3);margin-top:3px;line-height:1.5">${m.desc}</div>
-        <div style="font-size:11px;color:rgba(0,122,255,0.7);margin-top:3px;line-height:1.5"><i class="ti ti-bulb" style="vertical-align:-2px;font-size:11px;margin-right:3px"></i>${m.tip}</div>
+        <div style="font-size:11px;color:rgba(0,122,255,0.7);margin-top:3px;line-height:1.5"><span style="vertical-align:-2px;font-size:11px;margin-right:3px">💡</span>${m.tip}</div>
       </div>
     </div>`;
   });
@@ -1429,9 +1430,9 @@ function rProg(){
     h+='<div class="card gl" style="padding:0;margin-bottom:9px;overflow:hidden">';
     var _oc="toggleProgSection('" + sk + "')";
     h+='<div onclick="'+_oc+'" style="display:flex;align-items:center;gap:8px;padding:13px 14px;cursor:pointer">';
-    h+='<i class="ti '+sm.ico+'" style="color:'+sm.c+';font-size:18px"></i>';
+    h+='<span></span>';
     h+='<div style="font-size:13px;font-weight:700;flex:1">'+sm.l+'</div>';
-    h+='<i class="ti ti-chevron-'+(isOpen?"up":"down")+'" style="font-size:14px;color:var(--t3)"></i>';
+    h+='<span></span>';
     h+='</div>';
     if(isOpen){
       h+='<div style="padding:0 14px 12px">';
@@ -1554,7 +1555,7 @@ function checkSchedConflicts(sched){
 function rCfg(){
   const warns=checkSchedConflicts(ST.sched);
   let h='<div class="slbl">Orden semanal</div>';
-  if(warns.length)h+=warns.map(w=>'<div class="warn-row"><i class="ti ti-alert-triangle" style="font-size:14px;flex-shrink:0"></i><span>'+w+'</span></div>').join('');
+  if(warns.length)h+=warns.map(w=>'<div class="warn-row"><span style="font-size:14px;flex-shrink:0">⚠</span><span>'+w+'</span></div>').join('');
   for(let i=0;i<7;i++){
     const sk=ST.sched[i],sm=sk?SM[sk]:null;
     const up=i>0?'<button onclick="swapDays('+i+','+(i-1)+')" class="adj-btn">&#8593;</button>':'<div style="width:28px"></div>';
@@ -1631,7 +1632,7 @@ function openCalDay(ds){
     const dot=document.createElement("div");dot.className="cal-toggle-dot";dot.style.background=col;
     const l=document.createElement("div");l.style.cssText="font-size:13px;font-weight:"+fw+";color:"+col;l.textContent=lbl;
     info.appendChild(dot);info.appendChild(l);
-    const chk=document.createElement("div");chk.className="cal-toggle-check"+(checked?" on":"");chk.innerHTML="<i class='ti ti-check'></i>";
+    const chk=document.createElement("div");chk.className="cal-toggle-check"+(checked?" on":"");chk.innerHTML="✓";
     row.appendChild(info);row.appendChild(chk);return row;
   }
   const s1=document.createElement("div");s1.style.cssText="padding:0 16px 8px";
@@ -1657,7 +1658,7 @@ function openDayEditor(dayIdx){
     row.style.cssText="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;margin-bottom:7px;cursor:pointer;background:"+(isC?sm.bg:"rgba(0,0,0,0.02)")+";border:0.5px solid "+(isC?sm.c+"44":"var(--bd)");
     row.addEventListener("click",()=>setDaySession(dayIdx,s));
     const icon=document.createElement("div");icon.style.cssText="width:32px;height:32px;border-radius:9px;background:"+sm.bg+";display:flex;align-items:center;justify-content:center;flex-shrink:0";
-    icon.innerHTML="<i class='ti "+sm.ico+"' style='color:"+sm.c+";font-size:16px'></i>";
+    icon.innerHTML="<span></span>";
     const lbl=document.createElement("div");lbl.innerHTML="<div style='font-size:13px;font-weight:"+(isC?"700":"500")+";color:"+(isC?sm.c:"var(--t)")+"'>"+sm.l+"</div>";
     row.appendChild(icon);row.appendChild(lbl);
     if(isC){const ck=document.createElement("i");ck.className="ti ti-check";ck.style.cssText="color:var(--gr);font-size:16px;margin-left:auto";row.appendChild(ck);}
@@ -1729,7 +1730,7 @@ function goBack(){
 function rCfg(){
   const warns=checkSchedConflicts(ST.sched);
   let h='<div class="slbl">Orden semanal</div>';
-  if(warns.length)h+=warns.map(w=>'<div class="warn-row"><i class="ti ti-alert-triangle" style="font-size:14px;flex-shrink:0"></i><span>'+w+'</span></div>').join('');
+  if(warns.length)h+=warns.map(w=>'<div class="warn-row"><span style="font-size:14px;flex-shrink:0">⚠</span><span>'+w+'</span></div>').join('');
   for(let i=0;i<7;i++){
     const sk=ST.sched[i],sm=sk?SM[sk]:null;
     const up=i>0?'<button onclick="swapDays('+i+','+(i-1)+')" class="adj-btn">&#8593;</button>':'<div style="width:28px"></div>';
@@ -1806,7 +1807,7 @@ function openCalDay(ds){
     const dot=document.createElement("div");dot.className="cal-toggle-dot";dot.style.background=col;
     const l=document.createElement("div");l.style.cssText="font-size:13px;font-weight:"+fw+";color:"+col;l.textContent=lbl;
     info.appendChild(dot);info.appendChild(l);
-    const chk=document.createElement("div");chk.className="cal-toggle-check"+(checked?" on":"");chk.innerHTML="<i class='ti ti-check'></i>";
+    const chk=document.createElement("div");chk.className="cal-toggle-check"+(checked?" on":"");chk.innerHTML="✓";
     row.appendChild(info);row.appendChild(chk);return row;
   }
   const s1=document.createElement("div");s1.style.cssText="padding:0 16px 8px";
@@ -1832,7 +1833,7 @@ function openDayEditor(dayIdx){
     row.style.cssText="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;margin-bottom:7px;cursor:pointer;background:"+(isC?sm.bg:"rgba(0,0,0,0.02)")+";border:0.5px solid "+(isC?sm.c+"44":"var(--bd)");
     row.addEventListener("click",()=>setDaySession(dayIdx,s));
     const icon=document.createElement("div");icon.style.cssText="width:32px;height:32px;border-radius:9px;background:"+sm.bg+";display:flex;align-items:center;justify-content:center;flex-shrink:0";
-    icon.innerHTML="<i class='ti "+sm.ico+"' style='color:"+sm.c+";font-size:16px'></i>";
+    icon.innerHTML="<span></span>";
     const lbl=document.createElement("div");lbl.innerHTML="<div style='font-size:13px;font-weight:"+(isC?"700":"500")+";color:"+(isC?sm.c:"var(--t)")+"'>"+sm.l+"</div>";
     row.appendChild(icon);row.appendChild(lbl);
     if(isC){const ck=document.createElement("i");ck.className="ti ti-check";ck.style.cssText="color:var(--gr);font-size:16px;margin-left:auto";row.appendChild(ck);}
