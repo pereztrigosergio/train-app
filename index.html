@@ -224,7 +224,7 @@ function applyUpdate(){
 </script>
 </head>
 <body>
-<div id="app" style="min-height:100vh;background:#F2F3F8;font-family:-apple-system,sans-serif">
+<div id="app" style="min-height:100vh;background:#F2F3F8;font-family:-apple-system,sans-serif;display:flex;flex-direction:column">
   <!-- Update banner -->
   <div id="update-banner" style="display:none;position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:999;background:#007AFF;color:#fff;padding:calc(var(--st) + 10px) 16px 10px;align-items:center;justify-content:space-between;gap:10px;">
     <div style="font-size:13px;font-weight:600">Nueva version disponible</div>
@@ -261,10 +261,9 @@ function applyUpdate(){
       <div id="hdr"></div>
     </div>
   </div>
-  <div id="cnt" class="au" style="padding:16px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#1C1C1E;display:block">
-  <div style="font-size:12px;color:#8E8E93;text-transform:uppercase;font-weight:700;letter-spacing:.06em;padding:8px 4px 6px">Hoy</div>
+  <div id="cnt" class="au" style="padding:16px;font-family:-apple-system,sans-serif">
   <div style="background:#fff;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
-    <div style="font-size:16px;font-weight:800;margin-bottom:4px">Train. v2.8</div>
+    <div style="font-size:16px;font-weight:800;color:#1C1C1E;margin-bottom:4px">Train. v2.8</div>
     <div style="font-size:13px;color:#8E8E93">Cargando tu sesion...</div>
   </div>
 </div>
