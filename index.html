@@ -117,10 +117,9 @@ const SM={
   pf:{l:'Pierna Fuerza',c:'#FF6B35',bg:'rgba(255,107,53,0.07)'},
   th:{l:'Torso Hipert.',c:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
   ph:{l:'Pierna Hipert.',c:'#FF9F0A',bg:'rgba(255,159,10,0.07)'},
-  co:{l:'Core & Prevención',c:'#34C759',bg:'rgba(52,199,89,0.07)'},
-  hi:{l:'HIIT',c:'#FF3B30',bg:'rgba(255,59,48,0.07)'},
+  co:{l:'Core & Prevención',c:'#3A3A3A',bg:'rgba(58,58,58,0.07)'},
 };
-const DEFAULT_SCHED=['tf','pf','co','th','ph',null,null];
+const DEFAULT_SCHED=['tf','pf','co','th','ph',null,null]; // hi available via manual selector only
 const SPORTS=['Fútbol','Pádel','Voleibol','Surf','Carrera','Ciclismo','Natación','Senderismo','Yoga/Pilates','Otro'];
 const WEEK_LABELS=['Base','Carga','Pico','Ligera'];
 const TOTAL_MESOS=6;
@@ -131,53 +130,241 @@ const TOTAL_MESOS=6;
 // baseLoad: {s,r,rest} baseline (week1 meso1)
 // Progressive overload: meso adds ~5% volume each cycle, week modulates intensity
 
-function dupLoad(week, meso, type){
-  // type: 'strength' or 'hyp'
-  // Returns {sets, reps, rest} strings
-  const mesoBoost = meso - 1; // 0-5 extra difficulty tiers
+function getExLoad(ex,sdata,isAcc,week,meso){
+  // week: 1-4, meso: 1-6
+  // Progression: each meso adds +1 rep to S1 and S2 (within range)
+  // When rep ceiling hit -> user bumps level -> reps reset lower
+  const m=meso-1; // 0-5
+  const w=week;
+  const pat=ex?ex.pat:'';
 
-  if(type==='strength'){
-    // Base: 4x6, Carga: 4x5, Pico: 5x4, Ligera: 3x6
-    const schemes=[
-      {w:1,s:4,r:6,rest:'2min'},
-      {w:2,s:4,r:5,rest:'2min30s'},
-      {w:3,s:5,r:4,rest:'3min'},
-      {w:4,s:3,r:6,rest:'90s'},
-    ];
-    const base=schemes[week-1];
-    // Meso progression: every 2 mesos add 1 set on weeks 1-3
-    const extraSets=week<4?Math.floor(mesoBoost/2):0;
-    return {sets:base.s+extraSets,reps:base.r,rest:base.rest};
-  } else {
-    // Hyp: Base 3x10, Carga 4x10, Pico 4x8, Ligera 2x12
-    const schemes=[
-      {w:1,s:3,r:10,rest:'75s'},
-      {w:2,s:4,r:10,rest:'75s'},
-      {w:3,s:4,r:8,rest:'90s'},
-      {w:4,s:2,r:12,rest:'60s'},
-    ];
-    const base=schemes[week-1];
-    const extraSets=week<4?Math.floor(mesoBoost/2):0;
-    return {sets:base.s+extraSets,reps:base.r,rest:base.rest};
+  if(isAcc){
+    // Accessories: 3 sets, 10-12 reps, less rest
+    // S1:3x10 S2:3x12 S3:3x10 S4:2x10 + meso adds rep each cycle
+    const baseReps=[10,12,10,10][w-1];
+    const sets=[3,3,3,2][w-1];
+    const rest=['60s','60s','60s','45s'][w-1];
+    const reps=w<4?Math.min(baseReps+m,15):baseReps; // cap at 15
+    return {sets,reps,rest};
   }
+
+  // ── TORSO FUERZA ──────────────────────────────────
+  if(pat==='Empuje horizontal'&&sdata.type==='strength'){
+    // S1:4x8 S2:4x8 S3:4x6 S4:3x8 | S3 is intensity week: reduce reps, add tempo cue
+    const base=[
+      {s:4,r:8,rest:'2min',note:''},
+      {s:4,r:8,rest:'90s',note:'Reduce descanso 90s'},
+      {s:4,r:6,rest:'2min',note:'Tempo 3-0-1 — sube de nivel si puedes'},
+      {s:3,r:8,rest:'90s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,10):base.r; // progression cap 10
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Empuje vertical'&&sdata.type==='strength'){
+    const base=[
+      {s:4,r:10,rest:'2min',note:''},
+      {s:4,r:10,rest:'90s',note:'Reduce descanso 90s'},
+      {s:4,r:8,rest:'2min',note:'Pausa 2s arriba — sube de nivel si puedes'},
+      {s:3,r:10,rest:'90s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,13):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Tracción horizontal'&&sdata.type==='strength'){
+    const base=[
+      {s:4,r:8,rest:'90s',note:''},
+      {s:4,r:8,rest:'75s',note:'Reduce descanso 75s'},
+      {s:4,r:6,rest:'90s',note:'Pausa 2s arriba'},
+      {s:3,r:8,rest:'75s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,10):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Tracción vertical'&&sdata.type==='strength'){
+    const base=[
+      {s:4,r:8,rest:'90s',note:''},
+      {s:4,r:8,rest:'75s',note:'Reduce descanso 75s'},
+      {s:4,r:6,rest:'90s',note:'Tempo 3-0-1'},
+      {s:3,r:8,rest:'75s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,10):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+
+  // ── TORSO HIPERT ──────────────────────────────────
+  if(pat==='Empuje horizontal'&&sdata.type==='hyp'){
+    const base=[
+      {s:4,r:10,rest:'75s',note:''},
+      {s:4,r:12,rest:'60s',note:'Reduce descanso 60s'},
+      {s:4,r:8,rest:'75s',note:'Tempo 2-0-2'},
+      {s:3,r:10,rest:'60s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,14):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Empuje vertical'&&sdata.type==='hyp'){
+    const base=[
+      {s:4,r:10,rest:'75s',note:''},
+      {s:4,r:12,rest:'60s',note:'Reduce descanso 60s'},
+      {s:4,r:8,rest:'75s',note:'Pausa 2s abajo'},
+      {s:3,r:10,rest:'60s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,14):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Tracción horizontal'&&sdata.type==='hyp'){
+    const base=[
+      {s:4,r:12,rest:'60s',note:''},
+      {s:4,r:12,rest:'45s',note:'Reduce descanso 45s'},
+      {s:4,r:10,rest:'60s',note:'Tempo 3-0-1'},
+      {s:3,r:12,rest:'45s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,16):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+  if(pat==='Tracción vertical'&&sdata.type==='hyp'){
+    const base=[
+      {s:4,r:12,rest:'60s',note:''},
+      {s:4,r:12,rest:'45s',note:'Reduce descanso 45s'},
+      {s:4,r:10,rest:'60s',note:'Tempo 3-0-1'},
+      {s:3,r:12,rest:'45s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,16):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note};
+  }
+
+  // ── PIERNA — RDL UNILATERAL ───────────────────────
+  if(pat==='Dom. cadera unilateral'){
+    const isStr=sdata.type==='strength';
+    const base=isStr?[
+      {s:3,r:10,rest:'90s',note:''},
+      {s:4,r:10,rest:'90s',note:''},
+      {s:4,r:8,rest:'90s',note:'Tempo 3-0-1 — siente el estiramiento'},
+      {s:3,r:10,rest:'75s',note:'Descarga'},
+    ]:[
+      {s:3,r:10,rest:'90s',note:''},
+      {s:4,r:10,rest:'75s',note:''},
+      {s:4,r:8,rest:'90s',note:'Tempo 4-0-1'},
+      {s:3,r:10,rest:'60s',note:'Descarga'},
+    ];
+    const b=base[w-1];
+    const reps=w<4?Math.min(b.r+m,12):b.r;
+    return {sets:b.s,reps,rest:b.rest,note:b.note,perSide:true};
+  }
+
+  // ── PIERNA — SENTADILLA GLÚTEO ────────────────────
+  if(pat==='Dom. rodilla glúteo'){
+    const isStr=sdata.type==='strength';
+    const base=isStr?[
+      {s:4,r:10,rest:'90s',note:''},
+      {s:4,r:12,rest:'75s',note:''},
+      {s:4,r:8,rest:'90s',note:'Pausa 2s abajo'},
+      {s:3,r:10,rest:'75s',note:'Descarga'},
+    ]:[
+      {s:4,r:12,rest:'75s',note:''},
+      {s:4,r:12,rest:'60s',note:''},
+      {s:4,r:10,rest:'75s',note:'Tempo 3-0-1'},
+      {s:3,r:12,rest:'60s',note:'Descarga'},
+    ];
+    const b=base[w-1];
+    const reps=w<4?Math.min(b.r+m,15):b.r;
+    return {sets:b.s,reps,rest:b.rest,note:b.note};
+  }
+
+  // ── PIERNA — STEP-DOWN ────────────────────────────
+  if(pat==='Glúteo unilateral'){
+    const isStr=sdata.type==='strength';
+    const base=isStr?[
+      {s:3,r:10,rest:'75s',note:''},
+      {s:3,r:12,rest:'75s',note:''},
+      {s:4,r:8,rest:'75s',note:'Pausa 2s arriba — empuja con el talón'},
+      {s:3,r:10,rest:'60s',note:'Descarga'},
+    ]:[
+      {s:3,r:10,rest:'75s',note:''},
+      {s:3,r:12,rest:'60s',note:''},
+      {s:4,r:10,rest:'75s',note:'Tempo 3-0-1'},
+      {s:3,r:12,rest:'60s',note:'Descarga'},
+    ];
+    const b=base[w-1];
+    const reps=w<4?Math.min(b.r+m,14):b.r;
+    return {sets:b.s,reps,rest:b.rest,note:b.note,perSide:true};
+  }
+
+  // ── PIERNA — HIP THRUST ───────────────────────────
+  if(pat==='Glúteo extensión'){
+    const isStr=sdata.type==='strength';
+    const base=isStr?[
+      {s:4,r:10,rest:'75s',note:''},
+      {s:4,r:12,rest:'75s',note:''},
+      {s:4,r:8,rest:'90s',note:'Pausa 3s arriba apretando glúteo'},
+      {s:3,r:10,rest:'60s',note:'Descarga'},
+    ]:[
+      {s:4,r:12,rest:'75s',note:''},
+      {s:4,r:12,rest:'60s',note:''},
+      {s:4,r:10,rest:'75s',note:'Pausa 2s + tempo 3-0-1'},
+      {s:3,r:12,rest:'60s',note:'Descarga'},
+    ];
+    const b=base[w-1];
+    const reps=w<4?Math.min(b.r+m,15):b.r;
+    return {sets:b.s,reps,rest:b.rest,note:b.note};
+  }
+
+  // ── PIERNA — CLAMSHELL INVERTIDO ─────────────────
+  if(pat==='Glúteo medio'){
+    const base=[
+      {s:3,r:12,rest:'45s',note:'3s subiendo 3s bajando'},
+      {s:3,r:15,rest:'45s',note:'3s subiendo 3s bajando'},
+      {s:3,r:12,rest:'45s',note:'Pausa 3s arriba — aprieta el glúteo'},
+      {s:2,r:12,rest:'30s',note:'Descarga'},
+    ][w-1];
+    const reps=w<4?Math.min(base.r+m,18):base.r;
+    return {sets:base.s,reps,rest:base.rest,note:base.note,perSide:true};
+  }
+
+  // ── CORE MCGILL (sesión miércoles) ───────────────
+  if(pat==='Anti-rotación'||pat==='Flexión segura'||pat==='Estabilidad lateral'||pat==='Extensión de cadera'){
+    return coreLoad(week,meso,pat);
+  }
+
+  // Default fallback
+  const isStr=sdata&&sdata.type==='strength';
+  return isStr?
+    {sets:4,reps:Math.min(8+m,10),rest:'90s',note:''}:
+    {sets:4,reps:Math.min(10+m,14),rest:'75s',note:''};
 }
 
-function accLoad(week, meso, type){
-  if(type==='strength'){
-    const s=[{s:3,r:8},{s:3,r:7},{s:4,r:6},{s:2,r:8}];
-    const base=s[week-1];
-    return {sets:base.s,reps:base.r,rest:'90s'};
-  } else {
-    const s=[{s:3,r:12},{s:3,r:12},{s:4,r:10},{s:2,r:14}];
-    const base=s[week-1];
-    return {sets:base.s,reps:base.r,rest:'60s'};
-  }
+// Legacy wrappers for backward compat
+function dupLoad(week,meso,type,pat){
+  return getExLoad({pat:pat||''},{ type:type,base:[],acc:[] },false,week,meso);
 }
-
-function coreLoad(week, meso){
-  const s=[{s:3,r:'8/lado'},{s:3,r:'10/lado'},{s:4,r:'8/lado'},{s:2,r:'8/lado'}];
-  const base=s[week-1];
-  return {sets:base.s,reps:base.r,rest:'60s'};
+function accLoad(week,meso,type){
+  return getExLoad(null,{ type:type,base:[],acc:[] },true,week,meso);
+}
+function coreLoad(week,meso,pat){
+  const w=week;const m=meso-1;
+  // McGill protocol - time-based for isometric, reps for dynamic
+  if(pat==='Estabilidad lateral'){
+    // Plancha lateral - time
+    const t=[20,25,30,20][w-1]+m*5; // adds 5s per meso, cap at 60s
+    return {sets:[3,3,4,2][w-1],reps:Math.min(t,60)+'s',rest:'45s',perSide:true};
+  }
+  if(pat==='Flexión segura'){
+    // McGill curl-up - time hold
+    const t=[8,10,10,8][w-1]+m*2;
+    return {sets:[3,3,4,2][w-1],reps:Math.min(t,20)+'s',rest:'45s',perSide:false};
+  }
+  if(pat==='Anti-rotación'){
+    // Bird dog - reps with hold time in variant name
+    const r=Math.min([8,10,8,8][w-1]+m,12);
+    return {sets:[3,3,4,2][w-1],reps:r+'/lado',rest:'60s',perSide:true};
+  }
+  if(pat==='Extensión de cadera'){
+    // Puente - reps
+    const r=Math.min([10,12,10,10][w-1]+m,15);
+    return {sets:[3,3,4,2][w-1],reps:r,rest:'60s',perSide:false};
+  }
+  // Default
+  return {sets:[3,3,4,2][w-1],reps:Math.min([8,10,8,8][w-1]+m,12)+'/lado',rest:'60s'};
 }
 
 function fmtLoad(load, perSide){
@@ -222,8 +409,8 @@ const SESS={
       {id:'pf2',pat:'Dom. rodilla glúteo',mat:'KB 16kg',perSide:false,
        v:['Goblet sentadilla suave','Goblet KB 12kg','Goblet KB 16kg','Goblet pausa 2s','Sentadilla sumo KB','Sentadilla sumo pausa'],
        desc:'Sentadilla con foco en activación de glúteo — pies algo más separados.',tip:'Aprieta el glúteo al subir, no solo extiendas la rodilla.'},
-      {id:'pf3',pat:'Glúteo unilateral',mat:'KB 12kg',perSide:true,
-       v:['Step-up PC bajo','Step-up PC','Step-up KB 8kg','Step-up KB 12kg','Step-up pausa arriba','Step-up lateral KB'],
+      {id:'pf3',pat:'Glúteo unilateral',mat:'KB 12-16kg',perSide:true,
+       v:['Step-down PC bajo','Step-down PC','Step-down KB 12kg','Step-down KB 12kg','Step-down KB 12kg pausa','Step-down lateral KB 16kg'],
        desc:'Step-up empujando con el talón. Patrón funcional clave para el glúteo.',tip:'Empuja con el talón. La pierna de abajo no impulsa.'},
       {id:'pf4',pat:'Glúteo extensión',mat:'KB 16kg',perSide:false,
        v:['Puente PC','Puente KB 12kg','Puente KB 16kg','Puente unilateral','Puente uni. pausa 2s','Puente uni. KB'],
@@ -266,15 +453,16 @@ const SESS={
       {id:'ph2',pat:'Dom. rodilla glúteo',mat:'KB 16kg',perSide:false,
        v:['Goblet suave','Goblet KB 12kg','Goblet KB 16kg','Goblet pausa 2s','Sumo KB tempo','Sumo pausa profunda'],
        desc:'Sentadilla glúteo con mayor volumen para hipertrofia.',tip:'Profundidad completa. Aprieta el glúteo en cada rep.'},
-      {id:'ph3',pat:'Glúteo unilateral',mat:'KB 12kg',perSide:true,
-       v:['Step-up PC bajo','Step-up PC','Step-up KB 8kg','Step-up KB 12kg','Step-up lateral','Step-up pausa arriba'],
+      {id:'ph3',pat:'Glúteo unilateral',mat:'KB 12-16kg',perSide:true,
+       v:['Step-down PC bajo','Step-down PC','Step-down KB 12kg','Step-down KB 12kg','Step-down lateral KB','Step-down KB 12kg pausa'],
        desc:'Step-up con mayor volumen para hipertrofia de glúteo.',tip:'Empuja con el talón, no con la punta del pie.'},
-      {id:'ph4',pat:'Glúteo extensión',mat:'PC',perSide:true,
-       v:['Puente bilateral','Puente unilateral','Puente uni. pausa 2s','Puente uni. + KB','Puente uni. tempo','Puente uni. 1.5 reps'],
-       desc:'Glúteo unilateral con mayor volumen.',tip:'El glúteo trabaja, no la lumbar.'},
+      {id:'ph4',pat:'Glúteo extensión',mat:'KB 16kg',perSide:false,
+       v:['Hip thrust banco PC','Hip thrust banco KB 12kg','Hip thrust banco KB 16kg','Hip thrust banco pausa 3s','Hip thrust banco tempo','Hip thrust banco 1.5 reps'],
+       desc:'Hip thrust en banco para hipertrofia. Mayor volumen que en fuerza. Espalda en banco o sofá, KB sobre las caderas.',
+       tip:'Aprieta el glúteo en la cima. No hiperextiendas la lumbar. El banco a la altura de los omóplatos.'},
       {id:'ph5',pat:'Glúteo medio',mat:'PC',perSide:true,
        v:['Clamshell inv. suave','Clamshell inv. básico','Clamshell inv. pausa','Clamshell inv. lento','Clamshell inv. + elevación','Clamshell inv. tempo'],
-       desc:'Clamshell invertido con mayor volumen para hipertrofia de glúteo medio.',tip:'Controlado en todo el recorrido.'},
+       desc:'Clamshell invertido con mayor volumen para hipertrofia de glúteo medio.',tip:'Aprieta el glúteo antes de mover. Muy lento — 3s subiendo, 3s bajando. Rotación pura de cadera, no de pierna.'},
     ],
     acc:[]
   },
@@ -326,6 +514,25 @@ const SESS={
   }
 };
 
+const CORE_SESSION=[
+  {id:'cs1',pat:'Anti-rotación',mat:'PC',perSide:true,reps:'8/lado',
+   v:['Bird dog 4s','Bird dog 6s','Bird dog 8s','Bird dog 10s','Bird dog 10s + perturbación','Bird dog avanzado'],
+   desc:'En cuadrupedia, extiende el brazo y la pierna contrarios a la altura del cuerpo. Mantén la posición el tiempo indicado sin que la columna se mueva ni la cadera rote.',
+   tip:'Imagina un vaso de agua en la espalda. Core activo antes de extender. Si la cadera rota, reduce el rango.'},
+  {id:'cs2',pat:'Flexión segura',mat:'PC',perSide:false,reps:'8s',
+   v:['McGill curl-up 5s','McGill curl-up 8s','McGill curl-up 10s','McGill curl-up 12s','McGill + pierna elevada','McGill avanzado'],
+   desc:'Tumbado boca arriba, una rodilla flexionada, manos bajo la lumbar. Eleva ligeramente cabeza y hombros — solo los omóplatos. La columna lumbar NO se flexiona. Mantén el tiempo indicado.',
+   tip:'NO es un crunch. Las manos bajo la lumbar confirman que no la aplanas. Solo los omóplatos se despegan del suelo.'},
+  {id:'cs3',pat:'Estabilidad lateral',mat:'PC',perSide:true,reps:'20s',
+   v:['Plancha lateral rodillas 20s','Plancha lateral 20s','Plancha lateral 30s','Plancha lateral 40s','Plancha lateral + elevación','Plancha lateral 45s'],
+   desc:'Apoyo en el antebrazo y el lateral del pie. El cuerpo forma una línea recta de cabeza a talones. Trabaja el cuadrado lumbar y los oblicuos.',
+   tip:'La cadera no cae ni sube. El hombro de apoyo no se hunde — empuja el suelo activamente.'},
+  {id:'cs4',pat:'Extensión de cadera',mat:'PC',perSide:false,reps:'10',
+   v:['Puente glúteo 2s','Puente glúteo 3s','Puente glúteo 5s','Puente glúteo uni. 3s','Puente glúteo uni. 5s','Puente glúteo uni. 8s'],
+   desc:'Tumbado boca arriba con rodillas flexionadas. Eleva la cadera apretando el glúteo hasta formar línea recta de rodillas a hombros. Mantén la pausa indicada.',
+   tip:'El glúteo hace el trabajo, no la lumbar. No hiperextiendas. Aprieta el glúteo con fuerza en la pausa.'},
+];
+
 const CORE_POOL=[
   {id:'co1',pat:'Anti-rotación',mat:'PC',perSide:true,
    v:['Bird dog básico','Bird dog pausa 2s','Bird dog pausa 3s','Bird dog + perturbación','Bird dog lento 4s','Bird dog avanzado'],
@@ -347,7 +554,7 @@ const CORE_POOL=[
 const PF_ACC_POOL=[
   {id:'pfa1',pat:'Glúteo medio dinámico',mat:'PC',perSide:true,
    v:['Fire hydrant básico','Fire hydrant pausa','Fire hydrant círculos','Fire hydrant pausa larga','Fire hydrant + extensión','Fire hydrant avanzado'],
-   desc:'Cuadrupedia, eleva la rodilla hacia el lateral manteniendo 90°.',tip:'La cadera no rota. El movimiento es puro de la articulación de cadera.'},
+   desc:'Cuadrupedia, eleva la rodilla hacia el lateral manteniendo 90°.',tip:'Aprieta el glúteo antes de iniciar. 3s subiendo, 3s bajando. Lleva la rodilla al lateral empujando desde el glúteo, no desde el muslo. Si no lo sientes, reduce el rango y busca la contracción primero.'},
   {id:'pfa2',pat:'Glúteo medio cadena',mat:'PC',perSide:false,
    v:['Monster walk 10p','Monster walk 15p','Monster walk profundo','Monster walk lateral','Monster walk + pausa','Monster walk avanzado'],
    desc:'En sentadilla parcial, camina lateralmente manteniendo tensión en glúteos. Sin banda: sentadilla más profunda.',tip:'Rodillas siempre hacia afuera. No endereces el torso entre pasos.'},
@@ -415,7 +622,7 @@ function init(){
   // Legs: all start L3 (index 2)
   ['pf1','pf2','pf3','pf4','pf5','ph1','ph2','ph3','ph4','ph5'].forEach(id=>defLv(id,2));
   // Core and accessories: L3
-  [...CORE_POOL,...PF_ACC_POOL].forEach(ex=>defLv(ex.id,2));
+  [...CORE_POOL,...PF_ACC_POOL,...CORE_SESSION].forEach(ex=>defLv(ex.id,2));
   sv('xlv2',JSON.stringify(ST.xlv));
   const dn=gl('dn_'+tstr);if(dn)try{ST.done=new Set(JSON.parse(dn));}catch(e){}
   const md=gl('md_'+tstr);if(md)try{ST.mdone=new Set(JSON.parse(md));}catch(e){}
@@ -529,8 +736,7 @@ function rHoy(){
   h+=renderExList(sdata.base,sdata,false);
   if(sdata.acc.length){h+='<div class="slbl">Accesorios</div>';h+=renderExList(sdata.acc,sdata,true);}
   if(extras.acc){h+='<div class="slbl">Complementario rotativo</div>';h+=renderExListSingle(extras.acc,sdata);}
-  h+='<div class="slbl">Core rotativo</div>';
-  h+=renderExListSingle(extras.core,sdata);
+
 
   h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:4px" onclick="markCompleted(\''+sk+'\')">'
     +(comp?'✓ Completado — pulsa para desmarcar':'Marcar entrenamiento como completado')+'</button>';
@@ -567,9 +773,10 @@ function renderExListSingle(ex,sdata){
 
 function renderExCard(ex,sdata,isAcc){
   const {name,lv}=getVariant(ex);
-  const load=isAcc?accLoad(ST.week,ST.meso,sdata.type):dupLoad(ST.week,ST.meso,sdata.type);
-  const side=ex.perSide?'/lado':'';
+  const load=getExLoad(ex,sdata,isAcc,ST.week,ST.meso);
+  const side=(load.perSide||ex.perSide)?'/lado':'';
   const rStr=load.sets+'x'+load.reps+side;
+  const noteStr=load.note||'';
   const ok=ST.done.has(ex.id);
   return '<div class="exc'+(ok?' ok':'')+'" onclick="tapEx(\''+ex.id+'\')">'
     +'<div style="flex:1">'
@@ -581,7 +788,7 @@ function renderExCard(ex,sdata,isAcc){
     +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
     +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">L'+(lv+1)+'/6</span>'
     +'</div>'
-    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+load.rest+' descanso</div>'
+    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+load.rest+' descanso'+(noteStr?' · <span style="color:#007AFF">'+noteStr+'</span>':'')+'</div>'
     +'<div class="xd" id="xd_'+ex.id+'"><div style="margin-bottom:3px">'+ex.desc+'</div><div style="color:#007AFF">💡 '+ex.tip+'</div></div>'
     +'<button onclick="event.stopPropagation();toggleDesc(\''+ex.id+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;padding:3px 0 0;font-family:-apple-system,sans-serif">▼ Ver descripción</button>'
     +'</div><div class="chk'+(ok?' ok':'')+'">✓</div></div>';
@@ -650,23 +857,22 @@ function toggleDayDetail(i){
   if(!sk){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Día de descanso.</div>';}
   else{
     const sdata=SESS[sk];const extras=getDayExtras(sk);
-    const load=dupLoad(ST.week,ST.meso,sdata.type);
     let html='<div style="padding:6px 4px">';
+    const isAccEx=(ex)=>sdata.acc.includes(ex);
     [...sdata.base,...sdata.acc].forEach(ex=>{
       const {name,lv}=getVariant(ex);
       const side=ex.perSide?'/lado':'';
+      const exLoad=getExLoad(ex,sdata,isAccEx(ex),ST.week,ST.meso);
       html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.05)">'
         +'<span style="color:#444">'+name+'</span>'
-        +'<span style="color:'+sdata.color+';font-weight:600">'+load.sets+'x'+load.reps+side+'</span></div>';
+        +'<span style="color:'+sdata.color+';font-weight:600">'+exLoad.sets+'x'+exLoad.reps+side+'</span></div>';
     });
-    const cl=coreLoad(ST.week,ST.meso);
-    const clv=Math.min(getLv(extras.core.id),extras.core.v.length-1);
-    html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;color:#999">'
-      +'<span>'+extras.core.v[clv]+' (core)</span><span>'+cl.sets+'x'+cl.reps+(extras.core.perSide?'/lado':'')+'</span></div>';
+    // Core solo el miércoles
     if(extras.acc){
       const alv=Math.min(getLv(extras.acc.id),extras.acc.v.length-1);
+      const accLoad2=coreLoad(ST.week,ST.meso);
       html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;color:#999">'
-        +'<span>'+extras.acc.v[alv]+' (compl.)</span><span>'+cl.sets+'x'+cl.reps+(extras.acc.perSide?'/lado':'')+'</span></div>';
+        +'<span>'+extras.acc.v[alv]+' (compl.)</span><span>'+accLoad2.sets+'x'+accLoad2.reps+(extras.acc.perSide?'/lado':'')+'</span></div>';
     }
     html+='</div>';
     det.innerHTML=html;
@@ -684,8 +890,13 @@ function openSessModal(dayIdx){
       +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?sm.c:'#111')+'">'+sdata.name+'</div></div>'
       +(isC?'<span style="color:'+sm.c+'">✓</span>':'')+'</div>';
   });
+  html+='<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Opciones</div>';
   html+='<div class="opt-row" onclick="setSess('+dayIdx+',null)"><div class="opt-dot" style="background:#ccc"></div>'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(cur===null?'700':'400')+'">Descanso</div></div>'+(cur===null?'<span>✓</span>':'')+'</div>';
+  html+='<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Avanzado</div>';
+  const hiSm=SM.hi||{c:'#FF3B30'};const hiSdata=SESS.hi;
+  const isHi=cur==='hi';
+  html+='<div class="opt-row" onclick="setSess('+dayIdx+',\'hi\')"><div class="opt-dot" style="background:#FF3B30"></div><div style="flex:1"><div style="font-size:13px;font-weight:'+(isHi?'700':'400')+';color:'+(isHi?'#FF3B30':'#111')+'">HIIT Metabólico</div><div style="font-size:11px;color:#999">Cuando te sientas listo</div></div>'+(isHi?'<span style="color:#FF3B30">✓</span>':'')+'</div>';
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal').classList.add('show');
 }
@@ -938,13 +1149,13 @@ function rCal(){
     const ds=new Date(y,m,d).toDateString();const isT=ds===tstr;
     const comp=gl('completed_'+ds);const sport=gl('sport_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);
     const sm=comp&&SM[comp]?SM[comp]:null;const isFuture=new Date(y,m,d)>today;
-    let dotColor='transparent';
-    if(sm)dotColor=sm.c;
-    else if(mob)dotColor='#34C759';
-    else if(sport)dotColor='#FF9F0A';
+    const dots=[];
+    if(sm)dots.push(sm.c);
+    if(mob)dots.push('#34C759');
+    if(sport)dots.push('#FF3B30');
     h+='<div class="cal-d'+(isT?' today':'')+'" onclick="'+(isFuture?'':'calDay(\''+ds+'\')')+'" style="'+(isFuture?'opacity:.35':'cursor:pointer')+'">'
       +'<div class="cal-dn" style="font-weight:'+(isT?'800':'400')+';color:'+(isT?'#007AFF':'')+'">'+d+'</div>'
-      +'<div class="cal-dot" style="background:'+dotColor+'"></div></div>';
+      +'<div style="display:flex;gap:2px;margin-top:2px;justify-content:center">'+dots.map(function(c){return '<div style="width:4px;height:4px;border-radius:50%;background:'+c+'"></div>';}).join('')+'</div></div>';
   }
   h+='</div>';
   h+='<div style="display:flex;gap:12px;padding:14px 2px;flex-wrap:wrap">';
