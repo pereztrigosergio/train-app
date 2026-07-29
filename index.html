@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="2.9.3">
+<meta name="app-version" content="2.9.4">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -364,6 +364,11 @@ function coreLoad(week,meso,pat){
     // McGill curl-up - time hold
     const t=[8,10,10,8][w-1]+m*2;
     return {sets:[3,3,4,2][w-1],reps:Math.min(t,20)+'s',rest:'45s',perSide:false};
+  }
+  if(pat==='Anti-extensión global'){
+    // Plancha frontal - time
+    const t=[20,30,40,20][w-1]+m*5;
+    return {sets:[3,3,4,2][w-1],reps:Math.min(t,75)+'s',rest:'45s',perSide:false};
   }
   if(pat==='Anti-rotación'){
     // Bird dog - reps with hold time in variant name
@@ -1172,7 +1177,7 @@ function renderMedCard(m){
     +'</div>'
     +'<div style="font-size:11px;color:#999;margin-bottom:10px">'+m.tip+'</div>'
     +'<div style="display:flex;gap:6px">'
-    +'<input type="number" inputmode="decimal" step="0.1" id="medin_'+medSafeKey(m.k)+'" placeholder="'+(last?last.value:'cm')+'" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:13px;font-family:-apple-system,sans-serif">'
+    +'<input type="number" inputmode="decimal" step="0.1" id="medin_'+medSafeKey(m.k)+'" placeholder="'+(last?last.value:'cm')+'" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:16px;font-family:-apple-system,sans-serif">'
     +'<button onclick="saveMedValue(\''+m.k+'\')" style="padding:8px 16px;border-radius:8px;border:none;background:#007AFF;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif">Guardar</button>'
     +'</div></div>';
   if(hist.length){
@@ -1214,7 +1219,7 @@ function editMedEntry(k,idx){
   let html='<div style="padding:14px 16px">'
     +'<div style="font-size:12px;color:#999;margin-bottom:12px">Registro del '+fmtMedDate(entry.date)+'</div>'
     +'<div style="display:flex;gap:6px">'
-    +'<input type="number" inputmode="decimal" step="0.1" id="medEditVal" value="'+entry.value+'" style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:14px;font-family:-apple-system,sans-serif">'
+    +'<input type="number" inputmode="decimal" step="0.1" id="medEditVal" value="'+entry.value+'" style="flex:1;min-width:0;padding:9px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.12);font-size:16px;font-family:-apple-system,sans-serif">'
     +'</div>'
     +'<button class="btn btn-blue" style="margin-top:10px" onclick="saveEditedMedEntry(\''+k+'\','+idx+')">Guardar cambio</button>'
     +'</div>';
@@ -1341,7 +1346,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v2.9.3</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v2.9.4</div>';
   return h;
 }
 
