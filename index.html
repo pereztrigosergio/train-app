@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="2.9.4">
+<meta name="app-version" content="3.4.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -64,6 +64,9 @@ body{height:100%;font-family:-apple-system,BlinkMacSystemFont,sans-serif;backgro
 .fbtn.on{background:#007AFF;color:#fff;border-color:#007AFF}
 #modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);padding:24px}
 #modal.show{display:flex}
+#timerov{position:fixed;inset:0;z-index:300;display:none;background:#111;color:#fff;flex-direction:column}
+#timerov.show{display:flex}
+@keyframes pulseWork{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
 #modal-inner{background:#fff;border-radius:20px;width:100%;max-width:400px;padding:0 0 16px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:modalPopIn .28s cubic-bezier(0.34,1.56,0.64,1) both}
 @keyframes modalPopIn{0%{opacity:0;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
 .opt-row{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.06)}
@@ -116,6 +119,7 @@ body{height:100%;font-family:-apple-system,BlinkMacSystemFont,sans-serif;backgro
       <div id="modal-body"></div>
     </div>
   </div>
+  <div id="timerov"></div>
   <div id="swipe-indicator"></div>
   <div id="cel"><div id="cel-ico"></div><div id="cel-t"></div></div>
 </div>
@@ -123,458 +127,7 @@ body{height:100%;font-family:-apple-system,BlinkMacSystemFont,sans-serif;backgro
 const today=new Date();
 const tstr=today.toDateString();
 const DNAMES=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-const sidx=today.getDay()===0?6:today.getDay()-1;
-const SM={
-  tf:{l:'Torso Fuerza',c:'#007AFF',bg:'rgba(0,122,255,0.07)'},
-  pf:{l:'Pierna Fuerza',c:'#FF6B35',bg:'rgba(255,107,53,0.07)'},
-  th:{l:'Torso Hipert.',c:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
-  ph:{l:'Pierna Hipert.',c:'#FF9F0A',bg:'rgba(255,159,10,0.07)'},
-  co:{l:'Core & Prevención',c:'#3A3A3A',bg:'rgba(58,58,58,0.07)'},
-};
-const DEFAULT_SCHED=['tf','pf','co','th','ph',null,null]; // hi available via manual selector only
 const SPORTS=['Fútbol','Pádel','Voleibol','Surf','Carrera','Ciclismo','Natación','Senderismo','Yoga/Pilates','Otro'];
-const WEEK_LABELS=['Base','Carga','Pico','Ligera'];
-const TOTAL_MESOS=6;
-
-// ─── DUP VOLUME/INTENSITY SCHEME ──────────────────
-// getLoad(week, meso, baseLoad) returns {sets, reps, rest}
-// week: 1-4, meso: 1-6
-// baseLoad: {s,r,rest} baseline (week1 meso1)
-// Progressive overload: meso adds ~5% volume each cycle, week modulates intensity
-
-function getExLoad(ex,sdata,isAcc,week,meso){
-  // week: 1-4, meso: 1-6
-  // Progression: each meso adds +1 rep to S1 and S2 (within range)
-  // When rep ceiling hit -> user bumps level -> reps reset lower
-  const m=meso-1; // 0-5
-  const w=week;
-  const pat=ex?ex.pat:'';
-
-  if(isAcc){
-    // Accessories: 3 sets, 10-12 reps, less rest
-    // S1:3x10 S2:3x12 S3:3x10 S4:2x10 + meso adds rep each cycle
-    const baseReps=[10,12,10,10][w-1];
-    const sets=[3,3,3,2][w-1];
-    const rest=['60s','60s','60s','45s'][w-1];
-    const reps=w<4?Math.min(baseReps+m,15):baseReps; // cap at 15
-    return {sets,reps,rest};
-  }
-
-  // ── TORSO FUERZA ──────────────────────────────────
-  if(pat==='Empuje horizontal'&&sdata.type==='strength'){
-    // S1:4x8 S2:4x8 S3:4x6 S4:3x8 | S3 is intensity week: reduce reps, add tempo cue
-    const base=[
-      {s:4,r:8,rest:'2min',note:''},
-      {s:4,r:8,rest:'90s',note:'Reduce descanso 90s'},
-      {s:4,r:6,rest:'2min',note:'Tempo 3-0-1 — sube de nivel si puedes'},
-      {s:3,r:8,rest:'90s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,10):base.r; // progression cap 10
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Empuje vertical'&&sdata.type==='strength'){
-    const base=[
-      {s:4,r:10,rest:'2min',note:''},
-      {s:4,r:10,rest:'90s',note:'Reduce descanso 90s'},
-      {s:4,r:8,rest:'2min',note:'Pausa 2s arriba — sube de nivel si puedes'},
-      {s:3,r:10,rest:'90s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,13):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Tracción horizontal'&&sdata.type==='strength'){
-    const base=[
-      {s:4,r:8,rest:'90s',note:''},
-      {s:4,r:8,rest:'75s',note:'Reduce descanso 75s'},
-      {s:4,r:6,rest:'90s',note:'Pausa 2s arriba'},
-      {s:3,r:8,rest:'75s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,10):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Tracción vertical'&&sdata.type==='strength'){
-    const base=[
-      {s:4,r:8,rest:'90s',note:''},
-      {s:4,r:8,rest:'75s',note:'Reduce descanso 75s'},
-      {s:4,r:6,rest:'90s',note:'Tempo 3-0-1'},
-      {s:3,r:8,rest:'75s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,10):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-
-  // ── TORSO HIPERT ──────────────────────────────────
-  if(pat==='Empuje horizontal'&&sdata.type==='hyp'){
-    const base=[
-      {s:4,r:10,rest:'75s',note:''},
-      {s:4,r:12,rest:'60s',note:'Reduce descanso 60s'},
-      {s:4,r:8,rest:'75s',note:'Tempo 2-0-2'},
-      {s:3,r:10,rest:'60s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,14):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Empuje vertical'&&sdata.type==='hyp'){
-    const base=[
-      {s:4,r:10,rest:'75s',note:''},
-      {s:4,r:12,rest:'60s',note:'Reduce descanso 60s'},
-      {s:4,r:8,rest:'75s',note:'Pausa 2s abajo'},
-      {s:3,r:10,rest:'60s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,14):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Tracción horizontal'&&sdata.type==='hyp'){
-    const base=[
-      {s:4,r:12,rest:'60s',note:''},
-      {s:4,r:12,rest:'45s',note:'Reduce descanso 45s'},
-      {s:4,r:10,rest:'60s',note:'Tempo 3-0-1'},
-      {s:3,r:12,rest:'45s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,16):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-  if(pat==='Tracción vertical'&&sdata.type==='hyp'){
-    const base=[
-      {s:4,r:12,rest:'60s',note:''},
-      {s:4,r:12,rest:'45s',note:'Reduce descanso 45s'},
-      {s:4,r:10,rest:'60s',note:'Tempo 3-0-1'},
-      {s:3,r:12,rest:'45s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,16):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note};
-  }
-
-  // ── PIERNA — RDL UNILATERAL ───────────────────────
-  if(pat==='Dom. cadera unilateral'){
-    const isStr=sdata.type==='strength';
-    const base=isStr?[
-      {s:3,r:10,rest:'90s',note:''},
-      {s:4,r:10,rest:'90s',note:''},
-      {s:4,r:8,rest:'90s',note:'Tempo 3-0-1 — siente el estiramiento'},
-      {s:3,r:10,rest:'75s',note:'Descarga'},
-    ]:[
-      {s:3,r:10,rest:'90s',note:''},
-      {s:4,r:10,rest:'75s',note:''},
-      {s:4,r:8,rest:'90s',note:'Tempo 4-0-1'},
-      {s:3,r:10,rest:'60s',note:'Descarga'},
-    ];
-    const b=base[w-1];
-    const reps=w<4?Math.min(b.r+m,12):b.r;
-    return {sets:b.s,reps,rest:b.rest,note:b.note,perSide:true};
-  }
-
-  // ── PIERNA — SENTADILLA GLÚTEO ────────────────────
-  if(pat==='Dom. rodilla glúteo'){
-    const isStr=sdata.type==='strength';
-    const base=isStr?[
-      {s:4,r:10,rest:'90s',note:''},
-      {s:4,r:12,rest:'75s',note:''},
-      {s:4,r:8,rest:'90s',note:'Pausa 2s abajo'},
-      {s:3,r:10,rest:'75s',note:'Descarga'},
-    ]:[
-      {s:4,r:12,rest:'75s',note:''},
-      {s:4,r:12,rest:'60s',note:''},
-      {s:4,r:10,rest:'75s',note:'Tempo 3-0-1'},
-      {s:3,r:12,rest:'60s',note:'Descarga'},
-    ];
-    const b=base[w-1];
-    const reps=w<4?Math.min(b.r+m,15):b.r;
-    return {sets:b.s,reps,rest:b.rest,note:b.note};
-  }
-
-  // ── PIERNA — STEP-DOWN ────────────────────────────
-  if(pat==='Glúteo unilateral'){
-    const isStr=sdata.type==='strength';
-    const base=isStr?[
-      {s:3,r:10,rest:'75s',note:''},
-      {s:3,r:12,rest:'75s',note:''},
-      {s:4,r:8,rest:'75s',note:'Pausa 2s arriba — empuja con el talón'},
-      {s:3,r:10,rest:'60s',note:'Descarga'},
-    ]:[
-      {s:3,r:10,rest:'75s',note:''},
-      {s:3,r:12,rest:'60s',note:''},
-      {s:4,r:10,rest:'75s',note:'Tempo 3-0-1'},
-      {s:3,r:12,rest:'60s',note:'Descarga'},
-    ];
-    const b=base[w-1];
-    const reps=w<4?Math.min(b.r+m,14):b.r;
-    return {sets:b.s,reps,rest:b.rest,note:b.note,perSide:true};
-  }
-
-  // ── PIERNA — HIP THRUST ───────────────────────────
-  if(pat==='Glúteo extensión'){
-    const isStr=sdata.type==='strength';
-    const base=isStr?[
-      {s:4,r:10,rest:'75s',note:''},
-      {s:4,r:12,rest:'75s',note:''},
-      {s:4,r:8,rest:'90s',note:'Pausa 3s arriba apretando glúteo'},
-      {s:3,r:10,rest:'60s',note:'Descarga'},
-    ]:[
-      {s:4,r:12,rest:'75s',note:''},
-      {s:4,r:12,rest:'60s',note:''},
-      {s:4,r:10,rest:'75s',note:'Pausa 2s + tempo 3-0-1'},
-      {s:3,r:12,rest:'60s',note:'Descarga'},
-    ];
-    const b=base[w-1];
-    const reps=w<4?Math.min(b.r+m,15):b.r;
-    return {sets:b.s,reps,rest:b.rest,note:b.note};
-  }
-
-  // ── PIERNA — CLAMSHELL INVERTIDO ─────────────────
-  if(pat==='Glúteo medio'){
-    const base=[
-      {s:3,r:12,rest:'45s',note:'3s subiendo 3s bajando'},
-      {s:3,r:15,rest:'45s',note:'3s subiendo 3s bajando'},
-      {s:3,r:12,rest:'45s',note:'Pausa 3s arriba — aprieta el glúteo'},
-      {s:2,r:12,rest:'30s',note:'Descarga'},
-    ][w-1];
-    const reps=w<4?Math.min(base.r+m,18):base.r;
-    return {sets:base.s,reps,rest:base.rest,note:base.note,perSide:true};
-  }
-
-  // ── CORE MCGILL (sesión miércoles) ───────────────
-  if(pat==='Anti-rotación'||pat==='Flexión segura'||pat==='Estabilidad lateral'||pat==='Extensión de cadera'){
-    return coreLoad(week,meso,pat);
-  }
-
-  // Default fallback
-  const isStr=sdata&&sdata.type==='strength';
-  return isStr?
-    {sets:4,reps:Math.min(8+m,10),rest:'90s',note:''}:
-    {sets:4,reps:Math.min(10+m,14),rest:'75s',note:''};
-}
-
-// Legacy wrappers for backward compat
-function dupLoad(week,meso,type,pat){
-  return getExLoad({pat:pat||''},{ type:type,base:[],acc:[] },false,week,meso);
-}
-function accLoad(week,meso,type){
-  return getExLoad(null,{ type:type,base:[],acc:[] },true,week,meso);
-}
-function coreLoad(week,meso,pat){
-  const w=week;const m=meso-1;
-  // McGill protocol - time-based for isometric, reps for dynamic
-  if(pat==='Estabilidad lateral'){
-    // Plancha lateral - time
-    const t=[20,25,30,20][w-1]+m*5; // adds 5s per meso, cap at 60s
-    return {sets:[3,3,4,2][w-1],reps:Math.min(t,60)+'s',rest:'45s',perSide:true};
-  }
-  if(pat==='Flexión segura'){
-    // McGill curl-up - time hold
-    const t=[8,10,10,8][w-1]+m*2;
-    return {sets:[3,3,4,2][w-1],reps:Math.min(t,20)+'s',rest:'45s',perSide:false};
-  }
-  if(pat==='Anti-extensión global'){
-    // Plancha frontal - time
-    const t=[20,30,40,20][w-1]+m*5;
-    return {sets:[3,3,4,2][w-1],reps:Math.min(t,75)+'s',rest:'45s',perSide:false};
-  }
-  if(pat==='Anti-rotación'){
-    // Bird dog - reps with hold time in variant name
-    const r=Math.min([8,10,8,8][w-1]+m,12);
-    return {sets:[3,3,4,2][w-1],reps:r+'/lado',rest:'60s',perSide:true};
-  }
-  if(pat==='Extensión de cadera'){
-    // Puente - reps
-    const r=Math.min([10,12,10,10][w-1]+m,15);
-    return {sets:[3,3,4,2][w-1],reps:r,rest:'60s',perSide:false};
-  }
-  // Default
-  return {sets:[3,3,4,2][w-1],reps:Math.min([8,10,8,8][w-1]+m,12)+'/lado',rest:'60s'};
-}
-
-function fmtLoad(load, perSide){
-  const r = perSide ? load.reps+(typeof load.reps==='number'?'/lado':'') : load.reps;
-  return load.sets+'x'+r;
-}
-
-// ─── EXERCISE DATABASE ─────────────────────────────
-// v = 6 variants (L1-L6). r is computed dynamically from dupLoad.
-// perSide: true if reps are per side
-
-const SESS={
-  tf:{name:'Torso Fuerza',color:'#007AFF',bg:'rgba(0,122,255,0.07)',type:'strength',
-    base:[
-      {id:'tf1',pat:'Empuje horizontal',mat:'PC/Paralelas',perSide:false,
-       v:['Flexión rodillas','Flexión normal','Flexión declinada','Flexión arquera','Fondos pausa 2s','Fondos lastrado'],
-       desc:'Empuje horizontal de alta intensidad. Base del tren superior de fuerza.',tip:'Baja 3 segundos. Codos a 45° del torso.'},
-      {id:'tf2',pat:'Empuje vertical',mat:'PC',perSide:false,
-       v:['Pike push-up rodillas','Pike push-up','Pike pies elevados','Pike pausa 2s','Handstand negativo','Handstand push-up'],
-       desc:'Empuje vertical para deltoides y tríceps.',tip:'Cuanto más vertical el torso, más hombro. Codos al frente.'},
-      {id:'tf3',pat:'Tracción horizontal',mat:'TRX',perSide:false,
-       v:['Remo TRX muy inclinado','Remo TRX inclinado','Remo TRX horizontal','Remo TRX pausa 2s','Remo TRX unilateral','Remo TRX uni. pausa'],
-       desc:'Remo horizontal con TRX. A 1.90m puedes ponerte casi horizontal.',tip:'El codo guía hacia la cadera. Escápulas deprimidas.'},
-      {id:'tf4',pat:'Tracción vertical',mat:'Goma/TRX',perSide:false,
-       v:['Jalón bilateral suave','Jalón bilateral goma','Jalón bilateral grueso','Jalón unilateral','Jalón uni. pausa','Jalón uni. tempo'],
-       desc:'Jalón al pecho con goma anclada arriba o TRX a 1.90m.',tip:'Escápulas deprimidas antes de tirar. No te inclines.'},
-    ],
-    acc:[
-      {id:'tf5',pat:'Empuje accesorio',mat:'Paralelas',perSide:false,
-       v:['Fondos rango corto','Fondos normales','Fondos rango amplio','Fondos pausa 2s','Fondos tempo 3-0-1','Fondos lastrado'],
-       desc:'Fondos en paralelas para tríceps y pectoral inferior.',tip:'Baja hasta 90° de codo. Hombros relajados.'},
-      {id:'tf6',pat:'Bíceps',mat:'Goma',perSide:false,
-       v:['Curl bilateral suave','Curl bilateral','Curl unilateral','Curl pausa arriba','Curl tempo 3-0-1','Curl 21s'],
-       desc:'Curl de bíceps con goma.',tip:'Codos fijos. No balancees el torso.'},
-    ]
-  },
-  pf:{name:'Pierna Fuerza',color:'#FF6B35',bg:'rgba(255,107,53,0.07)',type:'strength',
-    base:[
-      {id:'pf1',pat:'Dom. cadera unilateral',mat:'KB 16kg',perSide:true,
-       v:['RDL uni. PC asistido','RDL uni. PC','RDL uni. KB 12kg','RDL uni. KB 16kg','RDL uni. pausa 2s','RDL uni. tempo 3-0-1'],
-       desc:'RDL a una pierna. Máximo trabajo de isquiotibial y glúteo con mínima carga lumbar.',tip:'Torso y pierna trasera forman una línea recta. Cadera cuadrada.'},
-      {id:'pf2',pat:'Dom. rodilla glúteo',mat:'KB 16kg',perSide:false,
-       v:['Goblet sentadilla suave','Goblet KB 12kg','Goblet KB 16kg','Goblet pausa 2s','Sentadilla sumo KB','Sentadilla sumo pausa'],
-       desc:'Sentadilla con foco en activación de glúteo — pies algo más separados.',tip:'Aprieta el glúteo al subir, no solo extiendas la rodilla.'},
-      {id:'pf3',pat:'Glúteo unilateral',mat:'KB 12-16kg',perSide:true,
-       v:['Step-down PC bajo','Step-down PC','Step-down KB 12kg','Step-down KB 12kg','Step-down KB 12kg pausa','Step-down lateral KB 16kg'],
-       desc:'Step-up empujando con el talón. Patrón funcional clave para el glúteo.',tip:'Empuja con el talón. La pierna de abajo no impulsa.'},
-      {id:'pf4',pat:'Glúteo extensión',mat:'KB 16kg',perSide:false,
-       v:['Puente PC','Puente KB 12kg','Puente KB 16kg','Puente unilateral','Puente uni. pausa 2s','Puente uni. KB'],
-       desc:'Puente de glúteo. KB sobre las caderas. Clave para fortalecer el glúteo y proteger la lumbar.',tip:'2 segundos arriba apretando el glúteo, no la lumbar.'},
-      {id:'pf5',pat:'Glúteo medio',mat:'PC',perSide:true,
-       v:['Clamshell inv. básico','Clamshell inv. pausa','Clamshell inv. lento','Clamshell inv. + elevación','Clamshell inv. tempo','Clamshell inv. avanzado'],
-       desc:'Clamshell invertido: empuja con la rodilla de ABAJO para elevar el cuerpo. Activa fuertemente el glúteo medio.',tip:'El movimiento sale de la cadera de abajo. Mantén control en todo el recorrido.'},
-    ],
-    acc:[]
-  },
-  th:{name:'Torso Hipert.',color:'#AF52DE',bg:'rgba(175,82,222,0.07)',type:'hyp',
-    base:[
-      {id:'th1',pat:'Empuje horizontal',mat:'PC/Paralelas',perSide:false,
-       v:['Flexión tempo suave','Flexión tempo 2-0-2','Flexión arquera tempo','Fondos normal','Fondos pausa 2s','Fondos tempo 3-0-2'],
-       desc:'Empuje horizontal con alto volumen y tiempo bajo tensión.',tip:'2s bajando, 2s subiendo. Calidad sobre velocidad.'},
-      {id:'th2',pat:'Empuje vertical',mat:'PC',perSide:false,
-       v:['Pike push-up suave','Pike push-up','Pike pies elevados','Pike pausa 2s','Pike pausa + tempo','Handstand negativo'],
-       desc:'Empuje vertical con volumen para deltoides y tríceps.',tip:'La pausa elimina el rebote. Mayor activación muscular.'},
-      {id:'th3',pat:'Tracción horizontal',mat:'TRX',perSide:false,
-       v:['Remo TRX muy inclinado','Remo TRX bilateral','Remo TRX horizontal','Remo TRX unilateral','Remo TRX tempo 2-0-2','Remo TRX uni. pausa'],
-       desc:'Remo TRX para hipertrofia con mayor volumen.',tip:'La bajada controlada 2-3s es donde ocurre el mayor estímulo.'},
-      {id:'th4',pat:'Tracción vertical',mat:'Goma',perSide:false,
-       v:['Jalón bilateral suave','Jalón bilateral','Jalón unilateral','Jalón uni. pausa','Jalón uni. tempo','Jalón uni. tempo + pausa'],
-       desc:'Jalón con goma para hipertrofia.',tip:'Máxima contracción del dorsal en el punto final.'},
-    ],
-    acc:[
-      {id:'th5',pat:'Tríceps',mat:'Goma',perSide:false,
-       v:['Extensión bilateral suave','Extensión bilateral','Extensión unilateral','Extensión pausa abajo','Extensión tempo 3-0-1','Extensión 21s'],
-       desc:'Extensión de tríceps overhead con goma.',tip:'Codos fijos junto a la cabeza.'},
-      {id:'th6',pat:'Deltoides posterior',mat:'Goma',perSide:false,
-       v:['Face pull suave','Face pull normal','Face pull pausa','Face pull tempo','Face pull + rotación','Face pull resistido'],
-       desc:'Tira de la goma hacia la cara separando los codos. Corrige la postura.',tip:'Codos a la altura de los hombros al final.'},
-    ]
-  },
-  ph:{name:'Pierna Hipert.',color:'#FF9F0A',bg:'rgba(255,159,10,0.07)',type:'hyp',
-    base:[
-      {id:'ph1',pat:'Dom. cadera unilateral',mat:'KB 16kg',perSide:true,
-       v:['RDL uni. PC suave','RDL uni. PC','RDL uni. KB 12kg','RDL uni. KB 16kg tempo','RDL uni. pausa larga','RDL uni. tempo 4-0-1'],
-       desc:'RDL unilateral con tempo para hipertrofia. Mayor tiempo bajo tensión.',tip:'3s bajando sintiendo el estiramiento isquiotibial.'},
-      {id:'ph2',pat:'Dom. rodilla glúteo',mat:'KB 16kg',perSide:false,
-       v:['Goblet suave','Goblet KB 12kg','Goblet KB 16kg','Goblet pausa 2s','Sumo KB tempo','Sumo pausa profunda'],
-       desc:'Sentadilla glúteo con mayor volumen para hipertrofia.',tip:'Profundidad completa. Aprieta el glúteo en cada rep.'},
-      {id:'ph3',pat:'Glúteo unilateral',mat:'KB 12-16kg',perSide:true,
-       v:['Step-down PC bajo','Step-down PC','Step-down KB 12kg','Step-down KB 12kg','Step-down lateral KB','Step-down KB 12kg pausa'],
-       desc:'Step-up con mayor volumen para hipertrofia de glúteo.',tip:'Empuja con el talón, no con la punta del pie.'},
-      {id:'ph4',pat:'Glúteo extensión',mat:'KB 16kg',perSide:false,
-       v:['Hip thrust banco PC','Hip thrust banco KB 12kg','Hip thrust banco KB 16kg','Hip thrust banco pausa 3s','Hip thrust banco tempo','Hip thrust banco 1.5 reps'],
-       desc:'Hip thrust en banco para hipertrofia. Mayor volumen que en fuerza. Espalda en banco o sofá, KB sobre las caderas.',
-       tip:'Aprieta el glúteo en la cima. No hiperextiendas la lumbar. El banco a la altura de los omóplatos.'},
-      {id:'ph5',pat:'Glúteo medio',mat:'PC',perSide:true,
-       v:['Clamshell inv. suave','Clamshell inv. básico','Clamshell inv. pausa','Clamshell inv. lento','Clamshell inv. + elevación','Clamshell inv. tempo'],
-       desc:'Clamshell invertido con mayor volumen para hipertrofia de glúteo medio.',tip:'Aprieta el glúteo antes de mover. Muy lento — 3s subiendo, 3s bajando. Rotación pura de cadera, no de pierna.'},
-    ],
-    acc:[]
-  },
-  hi:{name:'HIIT Metabólico',color:'#FF3B30',bg:'rgba(255,59,48,0.07)',type:'strength',
-    base:[
-      {id:'hi1',pat:'Balístico',mat:'KB 16kg',perSide:false,v:['KB Swing'],
-       desc:'Extensión explosiva de cadera.',tip:'Exhala fuerte al extender. Glúteos y core activos en la cima.'},
-      {id:'hi2',pat:'Full body',mat:'PC',perSide:false,v:['Burpees'],
-       desc:'Desde de pie al suelo con pecho a tierra, vuelta a salto.',tip:'Ritmo constante. Mejor moderado sin parar.'},
-      {id:'hi3',pat:'Potencia',mat:'PC',perSide:false,v:['Jump squat'],
-       desc:'Sentadilla con salto explosivo.',tip:'Aterriza suave absorbiendo con rodillas.'},
-      {id:'hi4',pat:'Core/Cardio',mat:'PC',perSide:false,v:['Mountain climbers'],
-       desc:'En plancha, lleva las rodillas al pecho alternando de forma explosiva.',tip:'Caderas bajas.'},
-    ],
-    acc:[]
-  },
-  co:{name:'Core & Prevención',color:'#34C759',bg:'rgba(52,199,89,0.07)',type:'core',
-    base:[
-      {id:'cs1',pat:'Anti-rotación',mat:'PC',perSide:true,
-       v:['Bird dog básico','Bird dog pausa 2s','Bird dog pausa 3s','Bird dog + perturbación','Bird dog lento 4s','Bird dog avanzado'],
-       desc:'En cuadrupedia, extiende simultáneamente el brazo derecho y la pierna izquierda (o viceversa) manteniéndolas a la altura del cuerpo durante 2-3 segundos. La columna lumbar no se mueve en ningún momento.',
-       tip:'Imagina un vaso de agua encima de la espalda — no debe caer. Si la cadera rota, reduce el rango. Core activo antes de extender.'},
-      {id:'cs2',pat:'Anti-extensión',mat:'PC',perSide:true,
-       v:['Dead bug básico','Dead bug pausa 3s','Dead bug lento 4s','Dead bug completo','Dead bug + peso','Dead bug avanzado'],
-       desc:'Tumbado boca arriba con las rodillas a 90° y los brazos apuntando al techo. Baja simultáneamente el brazo derecho hacia atrás y la pierna izquierda hacia el suelo, sin que la lumbar se despegue del suelo. Vuelve y alterna.',
-       tip:'La lumbar pegada al suelo es el único objetivo — no la amplitud del movimiento. Exhala al bajar para activar el core profundo.'},
-      {id:'cs3',pat:'Anti-rotación lateral',mat:'Goma',perSide:true,
-       v:['Pallof press básico','Pallof press pausa 3s','Pallof press paso lateral','Pallof press tempo','Pallof press + sentadilla','Pallof press dinámico'],
-       desc:'De pie lateral a la goma anclada a la altura del pecho, sujeta la goma con ambas manos en el centro del cuerpo. Empuja al frente extendiendo los brazos y aguanta 2-3 segundos resistiendo la rotación que quiere hacer la goma. Vuelve al centro. El torso no rota en ningún momento.',
-       tip:'La fuerza de la goma intentará rotarte — resiste eso. Pies a la anchura de los hombros, rodillas ligeramente flexionadas.'},
-      {id:'cs4',pat:'Estabilidad lateral',mat:'PC',perSide:true,
-       v:['Plancha lateral rodillas','Plancha lateral básica','Plancha lateral pausa','Plancha lateral + elevación','Plancha lateral dinámica','Plancha lateral avanzada'],
-       desc:'Apoyo en el antebrazo y el lateral del pie (o rodilla en versión inicial). El cuerpo forma una línea recta de cabeza a talones. Trabaja el cuadrado lumbar y los oblicuos — músculos clave para la estabilidad de la columna lumbar.',
-       tip:'La cadera no cae ni sube. El hombro de apoyo no se hunde — empuja activamente el suelo. Respira con normalidad durante el ejercicio.'},
-      {id:'cs5',pat:'Flexión segura',mat:'PC',perSide:false,
-       v:['McGill curl-up 5s','McGill curl-up 8s','McGill curl-up 10s','McGill + pierna elevada','McGill resistido','McGill avanzado'],
-       desc:'Tumbado boca arriba con una rodilla flexionada y la otra pierna estirada. Las manos debajo de la zona lumbar para mantener la curvatura natural. Eleva ligeramente la cabeza y los hombros del suelo — solo unos centímetros — sin que la columna lumbar se flexione. Mantén 8-10 segundos.',
-       tip:'NO es un crunch. La columna lumbar NO se flexiona — las manos debajo de la lumbar ayudan a controlarlo. Solo despegan los omóplatos del suelo. Es un ejercicio isométrico, no dinámico.'},
-      {id:'cs6',pat:'Anti-extensión global',mat:'PC',perSide:false,
-       v:['Plancha frontal 30s','Plancha frontal 45s','Plancha frontal 60s','Plancha + elevación pierna','Plancha inestable','Plancha 90s avanzada'],
-       desc:'Apoyo en antebrazos y puntas de los pies. El cuerpo forma una línea recta de cabeza a talones. Activa el core de forma isométrica total — es el ejercicio de referencia para la estabilidad del raquis.',
-       tip:'Aprieta el abdomen, los glúteos y los cuádriceps simultáneamente. No dejes que la cadera caiga o suba. La cabeza en posición neutra — no mires hacia arriba.'},
-      {id:'cs7',pat:'Core rotacional',mat:'KB 12kg',perSide:false,
-       v:['Halo KB 8kg lento','Halo KB 12kg','Halo KB 12kg pausa','Halo KB 16kg','Halo KB 16kg tempo','Halo KB 16kg avanzado'],
-       desc:'De pie o arrodillado, sostén la KB por las asas con ambas manos frente al pecho. Lleva la KB alrededor de la cabeza describiendo un círculo controlado — derecha, por encima, izquierda y vuelta al frente. Alterna la dirección en cada serie.',
-       tip:'El movimiento es solo de brazos y hombros. La pelvis y el torso no rotan — resiste activamente esa rotación con el core. Mantén la KB cerca de la cabeza durante todo el recorrido.'},
-    ],
-    acc:[]
-  }
-};
-
-const CORE_SESSION=[
-  {id:'cs1',pat:'Anti-rotación',mat:'PC',perSide:true,reps:'8/lado',
-   v:['Bird dog 4s','Bird dog 6s','Bird dog 8s','Bird dog 10s','Bird dog 10s + perturbación','Bird dog avanzado'],
-   desc:'En cuadrupedia, extiende el brazo y la pierna contrarios a la altura del cuerpo. Mantén la posición el tiempo indicado sin que la columna se mueva ni la cadera rote.',
-   tip:'Imagina un vaso de agua en la espalda. Core activo antes de extender. Si la cadera rota, reduce el rango.'},
-  {id:'cs2',pat:'Flexión segura',mat:'PC',perSide:false,reps:'8s',
-   v:['McGill curl-up 5s','McGill curl-up 8s','McGill curl-up 10s','McGill curl-up 12s','McGill + pierna elevada','McGill avanzado'],
-   desc:'Tumbado boca arriba, una rodilla flexionada, manos bajo la lumbar. Eleva ligeramente cabeza y hombros — solo los omóplatos. La columna lumbar NO se flexiona. Mantén el tiempo indicado.',
-   tip:'NO es un crunch. Las manos bajo la lumbar confirman que no la aplanas. Solo los omóplatos se despegan del suelo.'},
-  {id:'cs3',pat:'Estabilidad lateral',mat:'PC',perSide:true,reps:'20s',
-   v:['Plancha lateral rodillas 20s','Plancha lateral 20s','Plancha lateral 30s','Plancha lateral 40s','Plancha lateral + elevación','Plancha lateral 45s'],
-   desc:'Apoyo en el antebrazo y el lateral del pie. El cuerpo forma una línea recta de cabeza a talones. Trabaja el cuadrado lumbar y los oblicuos.',
-   tip:'La cadera no cae ni sube. El hombro de apoyo no se hunde — empuja el suelo activamente.'},
-  {id:'cs4',pat:'Anti-extensión global',mat:'PC',perSide:false,reps:'30s',
-   v:['Plancha frontal 20s','Plancha frontal 30s','Plancha frontal 40s','Plancha frontal 50s','Plancha frontal 60s','Plancha frontal 75s'],
-   desc:'Apoyo en antebrazos y puntas de los pies. Cuerpo en línea recta de cabeza a talones. Activa el core de forma isométrica total.',
-   tip:'Aprieta abdomen, glúteos y cuádriceps a la vez. No dejes que la cadera caiga o suba. Respira con normalidad.'},
-];
-
-const CORE_POOL=[
-  {id:'co1',pat:'Core rotacional',mat:'KB 12kg',perSide:false,
-   v:['Halo KB 8kg lento','Halo KB 12kg','Halo KB 12kg pausa','Halo KB 16kg','Halo KB 16kg tempo','Halo KB 16kg avanzado'],
-   desc:'De pie o arrodillado, lleva la KB alrededor de la cabeza describiendo un círculo controlado. Alterna dirección cada serie.',
-   tip:'El movimiento es solo de brazos y hombros. La pelvis y el torso NO rotan. Mantén la KB cerca de la cabeza.'},
-  {id:'co2',pat:'Anti-extensión',mat:'PC',perSide:true,
-   v:['Dead bug básico','Dead bug pausa','Dead bug lento','Dead bug completo','Dead bug + peso','Dead bug avanzado'],
-   desc:'Boca arriba, rodillas a 90°. Extiende brazo y pierna contrarios sin que la lumbar se levante.',tip:'La lumbar pegada al suelo es el único objetivo.'},
-  {id:'co3',pat:'Anti-rotación lateral',mat:'Goma',perSide:true,
-   v:['Pallof press básico','Pallof press pausa','Pallof press paso lateral','Pallof press tempo','Pallof press + sentadilla','Pallof press dinámico'],
-   desc:'De pie lateral a la goma, empuja al frente resistiendo la rotación.',tip:'El torso no rota en ningún momento.'},
-];
-
-const PF_ACC_POOL=[
-  {id:'pfa1',pat:'Glúteo medio dinámico',mat:'PC',perSide:true,
-   v:['Fire hydrant básico','Fire hydrant pausa','Fire hydrant círculos','Fire hydrant pausa larga','Fire hydrant + extensión','Fire hydrant avanzado'],
-   desc:'Cuadrupedia, eleva la rodilla hacia el lateral manteniendo 90°.',tip:'Aprieta el glúteo antes de iniciar. 3s subiendo, 3s bajando. Lleva la rodilla al lateral empujando desde el glúteo, no desde el muslo. Si no lo sientes, reduce el rango y busca la contracción primero.'},
-  {id:'pfa2',pat:'Glúteo medio cadena',mat:'PC',perSide:false,
-   v:['Monster walk 10p','Monster walk 15p','Monster walk profundo','Monster walk lateral','Monster walk + pausa','Monster walk avanzado'],
-   desc:'En sentadilla parcial, camina lateralmente manteniendo tensión en glúteos. Sin banda: sentadilla más profunda.',tip:'Rodillas siempre hacia afuera. No endereces el torso entre pasos.'},
-  {id:'pfa3',pat:'Unilateral avanzado',mat:'PC/TRX',perSide:true,
-   v:['Sentadilla asistida 1p','Pistol negativo asistido','Pistol caja media','Pistol caja baja','Pistol parcial libre','Pistol completo'],
-   desc:'Sentadilla a una pierna. Empieza asistido con TRX o apoyo.',tip:'Disponible a partir del mesociclo 3. Requiere buena movilidad de tobillo.',minMeso:3},
-];
-
 const MOB=[
   {id:'m1',n:'Cat-Cow',r:'10 reps',desc:'Cuadrupedia: inhala arqueando hacia abajo, exhala redondeando hacia arriba.',tip:'Fluido. Inhala al arquear, exhala al redondear.'},
   {id:'m2',n:'Rotación torácica',r:'8/lado',desc:'De lado con rodillas a 90°, abre el brazo superior hacia atrás.',tip:'La cadera queda fija. Solo rota la torácica.'},
@@ -607,14 +160,658 @@ const MOB_EXTRA={
   ]
 };
 
+// ─── NUEVA PROGRAMACIÓN DE ENTRENAMIENTO ──────────
+function todayIdx(){return today.getDay()===0?6:today.getDay()-1;}
+const SESSDEF={
+  tf:{name:'Torso Fuerza',color:'#007AFF',bg:'rgba(0,122,255,0.07)'},
+  pf:{name:'Pierna Fuerza',color:'#FF6B35',bg:'rgba(255,107,53,0.07)'},
+  mc:{name:'Movimiento + Core',color:'#3A3A3A',bg:'rgba(58,58,58,0.07)'},
+  ta:{name:'Torso Atlético',color:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
+  pa:{name:'Pierna Atlético',color:'#FF9F0A',bg:'rgba(255,159,10,0.07)'},
+};
+const DEFAULT_SCHED=['tf','pf','mc','ta','pa',null,null];
+
+const EXLIB={
+  eh:{name:'Empuje horizontal',principal:true,ex:[
+    {id:'eh1',n:'Flexiones',mat:'PC',reps:'8-20',v:['Flexión inclinada','Flexión normal','Flexión declinada','Flexión con pausa abajo','Flexión arquera','Flexión unilateral asistida','Flexión a una mano']},
+    {id:'eh2',n:'Fondos',mat:'Paralelas/banco',reps:'8-15',v:['Fondos asistidos','Fondos con peso corporal','Fondos con tempo lento','Fondos con lastre']},
+    {id:'eh3',n:'Flexión diamante',mat:'PC',reps:'8-15',v:['Diamante apoyada','Diamante normal','Diamante declinada']},
+    {id:'eh4',n:'Flexión explosiva',mat:'PC',reps:'6-10',v:['Flexión rápida','Flexión con palmada','Flexión pliométrica avanzada']},
+  ]},
+  th:{name:'Tracción horizontal',principal:true,ex:[
+    {id:'th1',n:'Remo TRX',mat:'TRX',reps:'8-15',v:['Inclinación ligera','Inclinación media','Inclinación alta','Una pierna elevada','Remo unilateral asistido']},
+    {id:'th2',n:'Remo unilateral con kettlebell',mat:'KB',reps:'8-15/lado',v:['12 kg','16 kg','Tempo lento','Pausa arriba']},
+    {id:'th3',n:'Remo renegado',mat:'KB',reps:'6-10/lado',v:['Apoyo alto','Con kettlebell','Con pausa']},
+    {id:'th4',n:'Remo invertido adaptado',mat:'TRX',reps:'8-15',v:['Inclinación baja','Inclinación media','Inclinación alta']},
+  ]},
+  ev:{name:'Empuje vertical',principal:true,ex:[
+    {id:'ev1',n:'Pike push up',mat:'PC',reps:'6-12',v:['Pike elevada','Pike normal','Pike pies elevados','Progresión handstand']},
+    {id:'ev2',n:'Press unilateral con kettlebell',mat:'KB',reps:'8-12/lado',v:['12 kg','16 kg','Tempo lento','Press con pausa']},
+    {id:'ev3',n:'Press con mancuerna',mat:'Mancuernas 7,5kg',reps:'10-15',v:['7,5 kg','Tempo lento','Unilateral']},
+  ]},
+  hc:{name:'Dominancia de cadera',principal:true,ex:[
+    {id:'hc1',n:'RDL unilateral con kettlebell',mat:'KB',reps:'8-15/lado',v:['Sin carga','12 kg','16 kg','Tempo lento (3-1-1)','Pausa en máxima tensión','Déficit pequeño']},
+    {id:'hc2',n:'Hip thrust unilateral con kettlebell',mat:'KB/banco',reps:'10-20/lado',v:['Puente unilateral peso corporal','12 kg','16 kg','Pausa arriba','Tempo lento']},
+    {id:'hc3',n:'Puente unilateral con kettlebell',mat:'KB',reps:'10-20/lado',v:['Peso corporal','12 kg','16 kg','Pausa isométrica arriba']},
+  ]},
+  rk:{name:'Dominancia de rodilla',principal:true,ex:[
+    {id:'rk1',n:'Split squat búlgaro',mat:'KB/banco',reps:'8-15/lado',v:['Sin carga','12 kg','16 kg','Tempo lento','Pausa abajo']},
+    {id:'rk2',n:'Zancadas',mat:'KB',reps:'8-15/lado',v:['Atrás peso corporal','Atrás con carga','Caminando','Frontal con kettlebell','Dinámica']},
+    {id:'rk3',n:'Step down / Step up en banco',mat:'Banco',reps:'8-15/lado',v:['Step down bajo','Step down controlado','Step down con kettlebell','Step up explosivo']},
+    {id:'rk4',n:'Pistol squat (progresión)',mat:'PC/banco',reps:'5-10/lado',v:['Sentadilla asistida','Pistol a banco','Pistol completa','Pistol con carga']},
+  ]},
+  gm:{name:'Accesorio glúteo medio',principal:false,ex:[
+    {id:'gm1',n:'Clamshell',mat:'PC/banda',reps:'12-20/lado',v:['Peso corporal','Banda ligera','Banda más fuerte','Tempo lento']},
+    {id:'gm2',n:'Abducción lateral tumbado',mat:'PC/banda',reps:'12-20/lado',v:['Peso corporal','Con banda','Con pausa arriba']},
+    {id:'gm3',n:'Copenhagen plank',mat:'Banco',reps:'15-30s/lado',v:['Rodilla apoyada','Pierna extendida parcial','Pierna extendida completa']},
+  ]},
+  acc:{name:'Accesorio torso',principal:false,ex:[
+    {id:'acc1',n:'Curl bíceps',mat:'KB/banda',reps:'10-15',v:['Banda suave','Banda fuerte','KB 12kg','Tempo lento']},
+    {id:'acc2',n:'Extensión tríceps',mat:'Banda',reps:'10-15',v:['Banda suave','Banda fuerte','Unilateral','Tempo lento']},
+    {id:'acc3',n:'Face pull (deltoides posterior)',mat:'Banda',reps:'12-20',v:['Banda suave','Banda fuerte','Pausa','Tempo lento']},
+  ]},
+};
+
+const TEMPLATES={
+  tf:{blocks:[{pat:'eh',count:2},{pat:'th',count:2},{pat:'ev',count:1},{pat:'acc',count:1}],metab:'short'},
+  ta:{blocks:[{pat:'eh',count:2},{pat:'th',count:2},{pat:'ev',count:1},{pat:'acc',count:1}],metab:'medium'},
+  pf:{blocks:[{pat:'hc',count:2},{pat:'rk',count:2},{pat:'gm',count:1}],metab:'short'},
+  pa:{blocks:[{pat:'hc',count:2},{pat:'rk',count:2},{pat:'gm',count:1}],metab:'medium'},
+};
+
+const CORE_MAIN=[
+  {id:'cm1',n:'Bird dog',mat:'PC',perSide:true,sets:'2-4',reps:'8-12/lado'},
+  {id:'cm2',n:'McGill curl-up',mat:'PC',sets:'2-4',reps:'10-15s'},
+  {id:'cm3',n:'Side plank',mat:'PC',perSide:true,sets:'2-4',reps:'20-40s'},
+];
+const CORE_COMP=[
+  {id:'cc1',n:'Dead bug'},{id:'cc2',n:'Pallof press'},
+  {id:'cc3',n:'Carry unilateral con kettlebell'},{id:'cc4',n:'Plancha frontal'},
+];
+const FLOW_MOVES=[
+  {id:'fm1',n:'Bear crawl adelante',d:'Manos y pies en el suelo, rodillas casi sin tocar. Avanza coordinando mano y pie contrarios.'},
+  {id:'fm2',n:'Bear crawl atrás',d:'Igual que el bear crawl pero retrocediendo, controlando el equilibrio.'},
+  {id:'fm3',n:'Bear crawl lateral',d:'Desplázate hacia un lado manteniendo la cadera baja y el core activado.'},
+  {id:'fm4',n:'Beast to crab',d:'Desde posición de oso, gira la cadera y pasa a posición de cangrejo. Alterna varias veces.'},
+  {id:'fm5',n:'Kick throughs',d:'Desde plancha alta, pasa una pierna por debajo del cuerpo hacia el lado contrario.'},
+  {id:'fm6',n:'Shin box flow dinámico',d:'Sentado, rota entre las dos posiciones de "caja de espinilla" sin apoyar las manos.'},
+  {id:'fm7',n:'Cossack flow',d:'Sentadilla lateral profunda, trasladando el peso de una pierna a otra con la contraria estirada.'},
+  {id:'fm8',n:'Ape movement',d:'Salto lateral en cuclillas apoyando las manos, aterrizando bajo y controlado.'},
+  {id:'fm9',n:'Transición suelo-de pie',d:'Desde tumbado, levántate hasta quedar de pie sin usar las manos.'},
+  {id:'fm10',n:'Flexión + rotación + toque de pie',d:'Haz una flexión y al subir rota el tronco tocando el pie contrario con la mano.'},
+  {id:'fm11',n:'Burpee controlado',d:'Baja a plancha, flexión opcional, sube a salto sin prisa. Prioriza la técnica, no la velocidad.'},
+  {id:'fm12',n:'Turkish get up simplificado',d:'Tumbado con un brazo extendido hacia arriba, incorpórate por fases hasta quedar de pie.'},
+];
+function getRotatedFlow(count){
+  const rnd=weekSeed('mc_flow');
+  const chosen=pickN(FLOW_MOVES,Math.min(count,FLOW_MOVES.length),rnd);
+  while(chosen.length<count)chosen.push(FLOW_MOVES[chosen.length%FLOW_MOVES.length]);
+  return chosen;
+}
+function getFlowFor(slotIdx,fallback){
+  const saved=gl('flowsel_'+slotIdx);
+  if(!saved)return fallback;
+  return FLOW_MOVES.find(function(m){return m.id===saved;})||fallback;
+}
+function setFlowFor(slotIdx,moveId){
+  if(moveId)sv('flowsel_'+slotIdx,moveId);
+  else localStorage.removeItem('flowsel_'+slotIdx);
+  closeModal();sH(rTab());
+}
+function openFlowPicker(slotIdx){
+  const rotated=getRotatedFlow(5);
+  const saved=gl('flowsel_'+slotIdx);
+  document.getElementById('modal-title').textContent='Cambiar movimiento Flow';
+  let html='<div class="opt-row" onclick="setFlowFor('+slotIdx+',null)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!saved?'700':'400')+';color:'+(!saved?'#007AFF':'#111')+'">🔀 Auto (rota cada semana)</div>'
+    +'<div style="font-size:11px;color:#999">Ahora mismo: '+rotated[slotIdx].n+'</div></div>'+(!saved?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  FLOW_MOVES.forEach(function(m){
+    const isC=saved===m.id;
+    html+='<div class="opt-row" onclick="setFlowFor('+slotIdx+',\''+m.id+'\')">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+m.n+'</div></div>'
+      +(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+const KB_COMPLEXES=[
+  '5 swings + 5 clean derecha + 5 clean izquierda + 5 press derecha + 5 press izquierda',
+  '5 deadlift + 5 remo derecha + 5 remo izquierda + 5 clean + 5 sentadilla frontal',
+  'Clean + press + reverse lunge (5 por lado)',
+  'Halo + goblet squat + press (5 rondas)',
+  'Turkish get up parcial + desplazamiento (3 por lado)',
+];
+const METAB_KB=['Swing','Clean','Clean + press','Snatch técnico','Goblet squat','Thruster','Halo','Farmer carry','Suitcase carry'];
+const METAB_BW=['Burpee','Flexión','Mountain climber','Bear crawl','Jump squat','Zancada dinámica','Skater','Plank shoulder taps','Crab walk'];
+const METAB_ROPE=['Saltos normales','Saltos rápidos','Doble salto','Alternos'];
+
+function seedRand(str){
+  let h=0;for(let i=0;i<str.length;i++){h=(h<<5)-h+str.charCodeAt(i);h|=0;}
+  return function(){h=(h*1103515245+12345)&0x7fffffff;return h/0x7fffffff;};
+}
+function pick(arr,rnd){return arr[Math.floor(rnd()*arr.length)];}
+function pickN(arr,n,rnd){const pool=arr.slice();const out=[];while(out.length<n&&pool.length){const i=Math.floor(rnd()*pool.length);out.push(pool.splice(i,1)[0]);}return out;}
+function weekTag(){
+  const onejan=new Date(today.getFullYear(),0,1);
+  const wk=Math.ceil((((today-onejan)/86400000)+onejan.getDay()+1)/7);
+  return wk+'_'+today.getFullYear();
+}
+function weekSeed(prefix){return seedRand(prefix+'_'+weekTag());}
+function genMetabolic(sk,intensity){
+  const ovrRaw=gl('metab_ovr_'+sk+'_'+weekTag());
+  let ovr=null;if(ovrRaw){try{ovr=JSON.parse(ovrRaw);}catch(e){}}
+  const express=isExpress();
+  const rnd=seedRand(sk+'_metab_'+weekTag()+'_'+(ovr?ovr.seed:0)+(express?'_ex':''));
+  const fmt=(ovr&&ovr.fmt)?ovr.fmt:pick(['EMOM','Tabata','Intervalos','AMRAP'],rnd);
+  const pool=[].concat(METAB_KB.map(e=>({e:e})),METAB_BW.map(e=>({e:e})),METAB_ROPE.map(e=>({e:e})));
+  if(fmt==='EMOM'){
+    const durPool=express?(intensity==='short'?[6,7,8]:[8,9,10]):(intensity==='short'?[8,10,12]:[12,14,15]);
+    const dur=pick(durPool,rnd);
+    const moves=pickN(pool,dur<=10?2:3,rnd);
+    return {fmt:fmt,title:'EMOM '+dur,detail:moves.map(function(m,i){return 'Min '+(i+1)+': '+m.e;}).join(' · ')+(moves.length>1?' (repetir ciclo)':''),dur:dur+' min',raw:{durMin:dur,moves:moves.map(function(m){return m.e;})}};
+  }
+  if(fmt==='Tabata'){
+    const blockPool=express?[1,2]:(intensity==='short'?[2,3]:[3]);
+    const blocks=pick(blockPool,rnd);
+    const moves=pickN(pool,blocks,rnd);
+    return {fmt:fmt,title:'Tabata ×'+blocks,detail:moves.map(function(m){return m.e;}).join(' → ')+' — 20s trabajo / 10s descanso, 4 min c/u',dur:(blocks*4)+' min',raw:{blocks:moves.map(function(m){return {move:m.e};})}};
+  }
+  if(fmt==='Intervalos'){
+    const schemeStr=pick(['20"/40"','30"/30"','40"/20"'],rnd);
+    const schemeMap={'20"/40"':{work:20,rest:40},'30"/30"':{work:30,rest:30},'40"/20"':{work:40,rest:20}};
+    const scheme=schemeMap[schemeStr];
+    const move=pick(pool,rnd);
+    const roundsPool=express?(intensity==='short'?[5,6]:[6,7]):(intensity==='short'?[8,10]:[10,12]);
+    const rounds=pick(roundsPool,rnd);
+    return {fmt:fmt,title:'Intervalos '+schemeStr,detail:rounds+' rondas de '+move.e,dur:'~'+Math.round(rounds*(scheme.work+scheme.rest)/60)+' min',raw:{scheme:scheme,rounds:rounds,move:move.e}};
+  }
+  const durPool=express?[3,4]:(intensity==='short'?[5,6]:[6,7]);
+  const dur=pick(durPool,rnd);
+  const moves=pickN(pool,3,rnd);
+  return {fmt:fmt,title:'AMRAP '+dur+' min',detail:moves.map(function(m){return '8-10 '+m.e;}).join(' · '),dur:dur+' min',raw:{durMin:dur,moves:moves.map(function(m){return m.e;})}};
+}
+function setMetabFmt(sk,fmt){
+  const key='metab_ovr_'+sk+'_'+weekTag();
+  if(fmt==='auto'){localStorage.removeItem(key);}
+  else{
+    let seed=1;const prevRaw=gl(key);
+    if(prevRaw){try{seed=(JSON.parse(prevRaw).seed||0)+1;}catch(e){}}
+    sv(key,JSON.stringify({fmt:fmt,seed:seed}));
+  }
+  closeModal();sH(rTab());
+}
+function openMetabPicker(sk){
+  document.getElementById('modal-title').textContent='Cambiar metabólico';
+  const ovrRaw=gl('metab_ovr_'+sk+'_'+weekTag());let curFmt=null;
+  if(ovrRaw){try{curFmt=JSON.parse(ovrRaw).fmt;}catch(e){}}
+  let html='<div class="opt-row" onclick="setMetabFmt(\''+sk+'\',\'auto\')">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!curFmt?'700':'400')+';color:'+(!curFmt?'#007AFF':'#111')+'">🎲 Aleatorio (recomendado)</div></div>'+(!curFmt?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  ['EMOM','Tabata','Intervalos','AMRAP'].forEach(function(f){
+    const isC=curFmt===f;
+    html+='<div class="opt-row" onclick="setMetabFmt(\''+sk+'\',\''+f+'\')">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+f+'</div></div>'+(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  });
+  html+='<div style="padding:10px 16px 2px;font-size:11px;color:#999">Volver a tocar un formato genera un entrenamiento aleatorio nuevo dentro de ese formato.</div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+
+// ─── MODO EXPRÉS ───────────────────────────────────
+function isExpress(){return !!ST.express;}
+function toggleExpress(){
+  ST.express=!ST.express;
+  sv('express_'+tstr,ST.express?'1':'0');
+  sH(rTab());
+}
+
+// ─── TEMPORIZADOR (Metabólico + Flow) ─────────────
+let TIMER=null;
+let audioCtx=null;
+function beep(freq,durMs){
+  try{
+    if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const osc=audioCtx.createOscillator();const gain=audioCtx.createGain();
+    osc.type='square';osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.28,audioCtx.currentTime+0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+durMs/1000);
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.start();osc.stop(audioCtx.currentTime+durMs/1000+0.03);
+  }catch(e){}
+}
+function beepWork(){beep(1500,140);setTimeout(function(){beep(1500,140);},170);vib([80,60,80]);}
+function beepRest(){beep(750,180);vib(100);}
+function beepFinal(){beep(1700,130);setTimeout(function(){beep(1700,130);},160);setTimeout(function(){beep(1700,320);},320);vib([100,80,100,80,200]);}
+function vib(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
+
+function buildMetabPhases(mb){
+  const phases=[{label:'Prepárate',dur:5,kind:'prep'}];
+  if(mb.fmt==='EMOM'){
+    for(let i=0;i<mb.raw.durMin;i++){
+      phases.push({label:'Min '+(i+1)+' — '+mb.raw.moves[i%mb.raw.moves.length],dur:60,kind:'work'});
+    }
+  } else if(mb.fmt==='Tabata'){
+    mb.raw.blocks.forEach(function(b,bi){
+      for(let r=0;r<8;r++){
+        phases.push({label:b.move,sub:'Bloque '+(bi+1)+'/'+mb.raw.blocks.length+' · ronda '+(r+1)+'/8',dur:20,kind:'work'});
+        phases.push({label:'Descanso',dur:10,kind:'rest'});
+      }
+    });
+  } else if(mb.fmt==='Intervalos'){
+    for(let r=0;r<mb.raw.rounds;r++){
+      phases.push({label:mb.raw.move,sub:'Ronda '+(r+1)+'/'+mb.raw.rounds,dur:mb.raw.scheme.work,kind:'work'});
+      phases.push({label:'Descanso',dur:mb.raw.scheme.rest,kind:'rest'});
+    }
+  } else if(mb.fmt==='AMRAP'){
+    phases.push({label:'AMRAP',sub:mb.raw.moves.join(' · '),dur:mb.raw.durMin*60,kind:'work'});
+  }
+  return phases;
+}
+function buildFlowPhases(){
+  const express=isExpress();
+  const rounds=express?2:3;
+  const workSec=express?25:35;
+  const transSec=12;
+  const rotated=getRotatedFlow(5);
+  const moves=[];for(let i=0;i<5;i++)moves.push(getFlowFor(i,rotated[i]));
+  const phases=[{label:'Prepárate',dur:5,kind:'prep'}];
+  for(let r=0;r<rounds;r++){
+    moves.forEach(function(m,i){
+      phases.push({label:m.n,sub:'Ronda '+(r+1)+'/'+rounds,dur:workSec,kind:'work'});
+      if(!(r===rounds-1&&i===moves.length-1))phases.push({label:'Transición',sub:'Siguiente: '+(moves[i+1]?moves[i+1].n:moves[0].n),dur:transSec,kind:'rest'});
+    });
+  }
+  return phases;
+}
+function startTimer(phases,title,onDoneMsg){
+  clearInterval(TIMER&&TIMER.interval);
+  TIMER={phases:phases,idx:0,remaining:phases[0].dur,running:true,interval:null,title:title,onDoneMsg:onDoneMsg||'¡Completado!'};
+  document.getElementById('timerov').classList.add('show');
+  renderTimer();
+  beepWork();
+  TIMER.interval=setInterval(tickTimer,1000);
+}
+function tickTimer(){
+  if(!TIMER||!TIMER.running)return;
+  TIMER.remaining--;
+  if(TIMER.remaining<=0){
+    TIMER.idx++;
+    if(TIMER.idx>=TIMER.phases.length){finishTimer();return;}
+    const ph=TIMER.phases[TIMER.idx];
+    TIMER.remaining=ph.dur;
+    if(ph.kind==='work')beepWork();else if(ph.kind==='rest')beepRest();else beepRest();
+  }
+  renderTimer();
+}
+function finishTimer(){
+  clearInterval(TIMER.interval);
+  beepFinal();
+  const msg=TIMER.onDoneMsg;
+  document.getElementById('timerov').innerHTML='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px">'
+    +'<div style="font-size:56px;margin-bottom:16px">🎉</div>'
+    +'<div style="font-size:20px;font-weight:800;margin-bottom:24px">'+msg+'</div>'
+    +'<button onclick="closeTimer()" style="background:#fff;color:#111;border:none;border-radius:12px;padding:14px 32px;font-size:15px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif">Cerrar</button></div>';
+}
+function pauseTimer(){if(!TIMER)return;TIMER.running=!TIMER.running;renderTimer();}
+function skipPhase(){
+  if(!TIMER)return;
+  TIMER.idx++;
+  if(TIMER.idx>=TIMER.phases.length){finishTimer();return;}
+  const ph=TIMER.phases[TIMER.idx];TIMER.remaining=ph.dur;
+  if(ph.kind==='work')beepWork();else beepRest();
+  renderTimer();
+}
+function closeTimer(){
+  if(TIMER)clearInterval(TIMER.interval);
+  TIMER=null;
+  document.getElementById('timerov').classList.remove('show');
+}
+function fmtClock(s){const m=Math.floor(s/60);const sec=s%60;return m+':'+(sec<10?'0':'')+sec;}
+function renderTimer(){
+  if(!TIMER)return;
+  const ph=TIMER.phases[TIMER.idx];
+  const next=TIMER.phases[TIMER.idx+1];
+  const bg=ph.kind==='work'?'#1a1a1a':(ph.kind==='prep'?'#1a1a1a':'#0a0a0a');
+  const accent=ph.kind==='work'?'#34C759':(ph.kind==='prep'?'#FF9F0A':'#007AFF');
+  const kindLabel=ph.kind==='work'?'TRABAJO':(ph.kind==='prep'?'PREPARADOS':'DESCANSO');
+  let h='<div style="background:'+bg+';flex:1;display:flex;flex-direction:column">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px">'
+    +'<div style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:600">'+TIMER.title+'</div>'
+    +'<button onclick="closeTimer()" style="background:rgba(255,255,255,0.1);border:none;width:30px;height:30px;border-radius:50%;color:#fff;font-size:15px;cursor:pointer">✕</button></div>';
+  h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px">'
+    +'<div style="font-size:13px;font-weight:800;letter-spacing:.1em;color:'+accent+';margin-bottom:10px">'+kindLabel+'</div>'
+    +'<div style="font-size:26px;font-weight:800;margin-bottom:6px">'+ph.label+'</div>'
+    +(ph.sub?'<div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:20px">'+ph.sub+'</div>':'<div style="margin-bottom:20px"></div>')
+    +'<div style="font-size:76px;font-weight:800;font-variant-numeric:tabular-nums;'+(TIMER.running&&ph.kind==='work'?'animation:pulseWork 1s ease-in-out infinite;':'')+'">'+fmtClock(TIMER.remaining)+'</div>'
+    +(next?'<div style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:18px">Siguiente: '+next.label+' · '+fmtClock(next.dur)+'</div>':'')
+    +'</div>';
+  h+='<div style="display:flex;gap:10px;padding:20px 24px 32px">'
+    +'<button onclick="skipPhase()" style="flex:1;padding:16px;border-radius:14px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif">⏭ Saltar</button>'
+    +'<button onclick="pauseTimer()" style="flex:2;padding:16px;border-radius:14px;border:none;background:'+(TIMER.running?'rgba(255,255,255,0.12)':accent)+';color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif">'+(TIMER.running?'⏸ Pausa':'▶ Reanudar')+'</button>'
+    +'</div></div>';
+  document.getElementById('timerov').innerHTML=h;
+}
+
+function getLv2(id){return ST.lvl[id]!==undefined?ST.lvl[id]:0;}
+function getLvlHistAll(){try{return JSON.parse(gl('lvl_hist')||'{}');}catch(e){return {};}}
+function getLvlHist(id){return getLvlHistAll()[id]||[];}
+function setExLevel(exId,newLv,maxLv){
+  newLv=Math.max(0,Math.min(maxLv,newLv));
+  ST.lvl[exId]=newLv;sv('lvl2',JSON.stringify(ST.lvl));
+  const hist=getLvlHistAll();if(!hist[exId])hist[exId]=[];
+  hist[exId].unshift({date:new Date().toISOString(),level:newLv});
+  sv('lvl_hist',JSON.stringify(hist));
+  sH(rProg());
+}
+function deleteLvlEntry(exId,idx){
+  const hist=getLvlHistAll();const entry=(hist[exId]||[])[idx];if(!entry)return;
+  document.getElementById('modal-title').textContent='Eliminar registro';
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:13px;color:#444;margin-bottom:14px">¿Eliminar el registro de Nivel '+(entry.level+1)+' del '+fmtMedDate(entry.date)+'? No se puede deshacer.</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" style="flex:1;margin:0" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn btn-red" style="flex:1;margin:0" onclick="confirmDeleteLvlEntry(\''+exId+'\','+idx+')">Eliminar</button>'
+    +'</div></div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmDeleteLvlEntry(exId,idx){
+  const hist=getLvlHistAll();const arr=hist[exId]||[];
+  arr.splice(idx,1);hist[exId]=arr;sv('lvl_hist',JSON.stringify(hist));
+  if(arr.length){ST.lvl[exId]=arr[0].level;}else{delete ST.lvl[exId];}
+  sv('lvl2',JSON.stringify(ST.lvl));
+  closeModal();sH(rProg());
+}
+function resetExProgress(exId){
+  document.getElementById('modal-title').textContent='Reiniciar ejercicio';
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:13px;color:#444;margin-bottom:14px">Se borrará todo el historial de este ejercicio y volverá al nivel 1. No se puede deshacer.</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" style="flex:1;margin:0" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn btn-red" style="flex:1;margin:0" onclick="confirmResetExProgress(\''+exId+'\')">Reiniciar</button>'
+    +'</div></div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmResetExProgress(exId){
+  const hist=getLvlHistAll();delete hist[exId];sv('lvl_hist',JSON.stringify(hist));
+  delete ST.lvl[exId];sv('lvl2',JSON.stringify(ST.lvl));
+  closeModal();sH(rProg());
+}
+function getRotatedExercises(sk,pat,count){
+  const lib=EXLIB[pat].ex;
+  const rnd=weekSeed(sk+'_'+pat);
+  const chosen=pickN(lib,Math.min(count,lib.length),rnd);
+  while(chosen.length<count)chosen.push(lib[chosen.length%lib.length]);
+  return chosen;
+}
+function getExFor(sk,pat,slotIdx,fallbackEx){
+  const saved=gl('exsel_'+sk+'_'+pat+'_'+slotIdx);
+  if(!saved)return fallbackEx;
+  const found=EXLIB[pat].ex.find(function(e){return e.id===saved;});
+  return found||fallbackEx;
+}
+function setExFor(sk,pat,slotIdx,exId){
+  if(exId)sv('exsel_'+sk+'_'+pat+'_'+slotIdx,exId);
+  else localStorage.removeItem('exsel_'+sk+'_'+pat+'_'+slotIdx);
+  closeModal();sH(rTab());
+}
+function openExPicker(sk,pat,slotIdx){
+  const blkDef=TEMPLATES[sk].blocks.find(function(x){return x.pat===pat;});
+  const count=blkDef?blkDef.count:slotIdx+1;
+  const rotated=getRotatedExercises(sk,pat,count);
+  const saved=gl('exsel_'+sk+'_'+pat+'_'+slotIdx);
+  const cur=getExFor(sk,pat,slotIdx,rotated[slotIdx]);
+  document.getElementById('modal-title').textContent='Cambiar ejercicio — '+EXLIB[pat].name;
+  let html='<div class="opt-row" onclick="setExFor(\''+sk+'\',\''+pat+'\','+slotIdx+',null)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!saved?'700':'400')+';color:'+(!saved?'#007AFF':'#111')+'">🔀 Auto (rota cada semana)</div>'
+    +'<div style="font-size:11px;color:#999">Ahora mismo: '+rotated[slotIdx].n+'</div></div>'+(!saved?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  EXLIB[pat].ex.forEach(function(ex){
+    const isC=saved===ex.id;
+    html+='<div class="opt-row" onclick="setExFor(\''+sk+'\',\''+pat+'\','+slotIdx+',\''+ex.id+'\')">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+ex.n+'</div>'
+      +'<div style="font-size:11px;color:#999">'+ex.mat+'</div></div>'
+      +(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function getSessionBlocks(sk){
+  const tpl=TEMPLATES[sk];const out=[];
+  tpl.blocks.forEach(function(b){
+    const rotated=getRotatedExercises(sk,b.pat,b.count);
+    for(let i=0;i<b.count;i++){
+      const ex=getExFor(sk,b.pat,i,rotated[i]);
+      const principal=EXLIB[b.pat].principal;
+      out.push({ex:ex,pat:b.pat,slotIdx:i,sets:principal?(isExpress()?3:4):'2-4',rir:principal?'1-2':'1-3',rest:principal?'90-150s':'45-60s'});
+    }
+  });
+  return out;
+}
+function sessionsUsingPattern(pat){
+  const out=[];
+  Object.keys(TEMPLATES).forEach(function(sk){
+    TEMPLATES[sk].blocks.forEach(function(b){
+      if(b.pat===pat){for(let i=0;i<b.count;i++)out.push({sk:sk,slotIdx:i});}
+    });
+  });
+  return out;
+}
+function tapEx2(id){if(ST.done.has(id))ST.done.delete(id);else ST.done.add(id);sv('dn_'+tstr,JSON.stringify([...ST.done]));sH(rTab());}
+function markCompleted2(sk){
+  const key='completed_'+tstr;
+  if(gl(key)===sk){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
+  else{
+    getSessionBlocks(sk).forEach(function(b){ST.done.add(sk+'_'+b.pat+'_'+b.slotIdx);});
+    ST.done.add(sk+'_metab');
+    sv('dn_'+tstr,JSON.stringify([...ST.done]));sv(key,sk);
+    showCel('💪','¡Sesión completada!');
+  }
+  sH(rTab());
+}
+function markCompletedMC(){
+  const key='completed_'+tstr;
+  if(gl(key)==='mc')localStorage.removeItem(key);
+  else{sv(key,'mc');showCel('💪','¡Sesión completada!');}
+  sH(rTab());
+}
+function renderExCard2(sk,b,sdata){
+  const ex=b.ex;const lv=Math.min(getLv2(ex.id),ex.v.length-1);
+  const doneId=sk+'_'+b.pat+'_'+b.slotIdx;const ok=ST.done.has(doneId);
+  return '<div class="exc'+(ok?' ok':'')+'">'
+    +'<div style="flex:1" onclick="tapEx2(\''+doneId+'\')">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +'<div class="xn'+(ok?' ok':'')+'">'+ex.n+' <span style="font-weight:400;color:#999;font-size:11px">— '+ex.v[lv]+'</span></div>'
+    +'<div class="xr" style="color:'+sdata.color+'">'+b.sets+'×'+ex.reps+'</div></div>'
+    +'<div style="margin-top:4px">'
+    +'<span class="xt" style="background:'+sdata.bg+';color:'+sdata.color+'">'+EXLIB[b.pat].name+'</span>'
+    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
+    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">Nivel '+(lv+1)+'/'+ex.v.length+'</span></div>'
+    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+b.rest+' descanso · RIR '+b.rir+'</div>'
+    +'</div>'
+    +'<button onclick="event.stopPropagation();openExPicker(\''+sk+'\',\''+b.pat+'\','+b.slotIdx+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
+    +'<div class="chk'+(ok?' ok':'')+'" onclick="tapEx2(\''+doneId+'\')">✓</div></div>';
+}
+function runMetabTimer(sk,intensity){
+  const mb=genMetabolic(sk,intensity);
+  startTimer(buildMetabPhases(mb),SESSDEF[sk].name+' · '+mb.title,'¡Metabólico completado! 💪');
+}
+function rSessionCard(sk){
+  const sdata=SESSDEF[sk];const tpl=TEMPLATES[sk];const blocks=getSessionBlocks(sk);
+  const doneIds=blocks.map(function(b){return sk+'_'+b.pat+'_'+b.slotIdx;});
+  const metabDoneId=sk+'_metab';const allIds=doneIds.concat([metabDoneId]);
+  const doneCount=allIds.filter(function(id){return ST.done.has(id);}).length;
+  const pct=Math.round(doneCount/allIds.length*100);
+  const comp=gl('completed_'+tstr)===sk;
+  let h='<div class="slbl">Sesión de hoy</div>';
+  h+='<div class="card" style="border-color:'+sdata.color+'">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    +'<div style="width:8px;height:8px;border-radius:50%;background:'+sdata.color+'"></div>'
+    +'<div style="font-size:14px;font-weight:700">'+sdata.name+'</div></div>'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:5px">'
+    +'<span style="font-size:11px;color:#999">Progreso</span>'
+    +'<span style="font-size:11px;font-weight:700;color:'+sdata.color+'">'+doneCount+'/'+allIds.length+'</span></div>'
+    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:'+sdata.color+'"></div></div></div>';
+  let curPat='';
+  blocks.forEach(function(b){
+    if(b.pat!==curPat){curPat=b.pat;h+='<div class="slbl">'+EXLIB[b.pat].name+'</div>';}
+    h+=renderExCard2(sk,b,sdata);
+  });
+  const mb=genMetabolic(sk,tpl.metab);const mDone=ST.done.has(metabDoneId);
+  h+='<div class="slbl">Metabólico</div>';
+  h+='<div class="exc'+(mDone?' ok':'')+'">'
+    +'<div style="flex:1" onclick="tapEx2(\''+metabDoneId+'\')"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +'<div class="xn'+(mDone?' ok':'')+'">'+mb.title+'</div>'
+    +'<div class="xr" style="color:'+sdata.color+'">'+mb.dur+'</div></div>'
+    +'<div style="font-size:12px;color:#666;margin-top:6px;line-height:1.5">'+mb.detail+'</div></div>'
+    +'<button onclick="event.stopPropagation();openMetabPicker(\''+sk+'\')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
+    +'<div class="chk'+(mDone?' ok':'')+'" onclick="tapEx2(\''+metabDoneId+'\')">✓</div></div>';
+  h+='<button class="btn btn-blue" style="margin-top:8px" onclick="runMetabTimer(\''+sk+'\',\''+tpl.metab+'\')">▶ Iniciar temporizador</button>';
+  h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:10px" onclick="markCompleted2(\''+sk+'\')">'
+    +(comp?'✓ Completado — pulsa para desmarcar':'Marcar entrenamiento como completado')+'</button>';
+  return h;
+}
+function runFlowTimer(){
+  startTimer(buildFlowPhases(),'Flow / Movimiento atlético','¡Flow completado! 🌊');
+}
+function rMovCore(){
+  const rotatedFlow=getRotatedFlow(5);
+  const complex=pick(KB_COMPLEXES,weekSeed('mc_complex'));
+  const compExtra=pick(CORE_COMP,weekSeed('mc_core_extra'));
+  const express=isExpress();
+  const roundsTxt=express?'2 rondas':'3-4 rondas';
+  const workTxt=express?'25s':'30-40s';
+  let h='<div class="slbl">Movimiento + Core</div>';
+  h+='<div class="card" style="border-color:#3A3A3A"><div style="font-size:14px;font-weight:700;margin-bottom:4px">🌊 Flow / Movimiento atlético</div>'
+    +'<div style="font-size:11px;color:#999;line-height:1.6;margin-bottom:10px">'
+    +'<strong>¿Cómo funciona?</strong> Encadena los 5 movimientos de abajo uno tras otro, formando una ronda. Al terminar los 5, vuelve a empezar. Completa '+roundsTxt+', dedicando '+workTxt+' a cada movimiento y 10-15s de transición entre ellos. No busques intensidad, busca fluidez y control.</div>';
+  for(let i=0;i<5;i++){
+    const m=getFlowFor(i,rotatedFlow[i]);
+    const id='mc_flow_'+i;const ok=ST.done.has(id);
+    h+='<div class="exc'+(ok?' ok':'')+'" style="margin-bottom:6px">'
+      +'<div style="flex:1" onclick="tapEx2(\''+id+'\')"><div class="xn'+(ok?' ok':'')+'">'+m.n+'</div>'
+      +'<div style="font-size:11px;color:#999;margin-top:3px;line-height:1.4">'+m.d+'</div></div>'
+      +'<button onclick="event.stopPropagation();openFlowPicker('+i+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
+      +'<div class="chk'+(ok?' ok':'')+'" onclick="tapEx2(\''+id+'\')">✓</div></div>';
+  }
+  h+='<button class="btn btn-blue" style="margin-top:2px" onclick="runFlowTimer()">▶ Iniciar Flow</button>';
+  const cxId='mc_complex';const cxOk=ST.done.has(cxId);
+  h+='<div class="exc'+(cxOk?' ok':'')+'" onclick="tapEx2(\''+cxId+'\')" style="margin-bottom:0;margin-top:10px">'
+    +'<div style="flex:1"><div class="xn'+(cxOk?' ok':'')+'">💪 Complejo KB 12kg <span style="font-size:10px;color:#999;font-weight:400">(opcional, añádelo dentro de los 15-25 min)</span></div>'
+    +'<div style="font-size:11px;color:#666;margin-top:3px">'+complex+'</div></div>'
+    +'<div class="chk'+(cxOk?' ok':'')+'">✓</div></div>'
+    +'</div>';
+  h+='<div class="slbl">Core (McGill)</div>';
+  CORE_MAIN.forEach(function(ex){
+    const ok=ST.done.has(ex.id);const side=ex.perSide?'/lado':'';
+    h+='<div class="exc'+(ok?' ok':'')+'" onclick="tapEx2(\''+ex.id+'\')">'
+      +'<div style="flex:1"><div style="display:flex;justify-content:space-between"><div class="xn'+(ok?' ok':'')+'">'+ex.n+'</div>'
+      +'<div class="xr" style="color:#3A3A3A">'+ex.sets+'×'+ex.reps+side+'</div></div></div>'
+      +'<div class="chk'+(ok?' ok':'')+'">✓</div></div>';
+  });
+  const ccId='mc_comp_'+compExtra.id;const ccOk=ST.done.has(ccId);
+  h+='<div class="exc'+(ccOk?' ok':'')+'" onclick="tapEx2(\''+ccId+'\')" style="opacity:0.85">'
+    +'<div style="flex:1"><div class="xn'+(ccOk?' ok':'')+'">'+compExtra.n+' <span style="font-size:10px;color:#999;font-weight:400">(complementario, opcional)</span></div></div>'
+    +'<div class="chk'+(ccOk?' ok':'')+'">✓</div></div>';
+  const z2Id='mc_z2';const z2Ok=ST.done.has(z2Id);
+  h+='<div class="slbl">Zona 2 (opcional)</div>';
+  h+='<div class="exc'+(z2Ok?' ok':'')+'" onclick="tapEx2(\''+z2Id+'\')">'
+    +'<div style="flex:1"><div class="xn'+(z2Ok?' ok':'')+'">🚴 Bicicleta estática — 20-40 min conversacional</div></div>'
+    +'<div class="chk'+(z2Ok?' ok':'')+'">✓</div></div>';
+  const comp=gl('completed_'+tstr)==='mc';
+  h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:10px" onclick="markCompletedMC()">'
+    +(comp?'✓ Completado — pulsa para desmarcar':'Marcar como completada')+'</button>';
+  return h;
+}
+function rSem(){
+  let h='<div class="slbl">Esta semana</div>';
+  for(let i=0;i<7;i++){
+    const sk=ST.sched[i];const sm=sk?SESSDEF[sk]:null;const isT=i===todayIdx();
+    const d=new Date(today);d.setDate(today.getDate()-todayIdx()+i);const ds=d.toDateString();const comp=gl('completed_'+ds);
+    h+='<div class="dayr'+(isT?' today':'')+'" onclick="toggleDayDetail2('+i+')" id="dayrow-'+i+'">'
+      +'<div class="daydot" style="background:'+(sm?sm.bg:'rgba(0,0,0,0.04)')+';color:'+(sm?sm.color:'#ccc')+'">'+DNAMES[i].slice(0,2)+'</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">'+DNAMES[i]+(isT?' <span style="font-size:10px;background:rgba(0,122,255,0.1);color:#007AFF;padding:1px 7px;border-radius:99px">Hoy</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:#999;margin-top:1px">'+(sm?sm.name:'Descanso')+'</div></div>'
+      +(comp?'<span style="font-size:16px">✅</span>':'')
+      +'<button onclick="event.stopPropagation();openSessModal2('+i+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;flex-shrink:0">🔀</button></div>'
+      +'<div id="detail-'+i+'" style="display:none;padding:0 0 4px"></div>';
+  }
+  return h;
+}
+function toggleDayDetail2(i){
+  const det=document.getElementById('detail-'+i);if(!det)return;
+  if(det.style.display==='block'){det.style.display='none';return;}
+  document.querySelectorAll('[id^="detail-"]').forEach(function(d){d.style.display='none';});
+  const sk=ST.sched[i];
+  if(!sk){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Día de descanso.</div>';}
+  else if(sk==='mc'){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Flow + Core + Zona 2 opcional.</div>';}
+  else{
+    let html='<div style="padding:6px 4px">';
+    getSessionBlocks(sk).forEach(function(b){
+      html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.05)"><span style="color:#444">'+b.ex.n+'</span><span style="color:'+SESSDEF[sk].color+';font-weight:600">'+b.sets+'×'+b.ex.reps+'</span></div>';
+    });
+    html+='</div>';det.innerHTML=html;
+  }
+  det.style.display='block';
+}
+function openSessModal2(dayIdx){
+  document.getElementById('modal-title').textContent='Cambiar — '+DNAMES[dayIdx];
+  const cur=ST.sched[dayIdx];let html='';
+  Object.keys(SESSDEF).forEach(function(sk){
+    const sm=SESSDEF[sk];const isC=cur===sk;
+    html+='<div class="opt-row" onclick="setSess2('+dayIdx+',\''+sk+'\')">'
+      +'<div class="opt-dot" style="background:'+sm.color+'"></div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?sm.color:'#111')+'">'+sm.name+'</div></div>'
+      +(isC?'<span style="color:'+sm.color+'">✓</span>':'')+'</div>';
+  });
+  html+='<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Opciones</div>';
+  html+='<div class="opt-row" onclick="setSess2('+dayIdx+',null)"><div class="opt-dot" style="background:#ccc"></div>'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(cur===null?'700':'400')+'">Descanso</div></div>'+(cur===null?'<span>✓</span>':'')+'</div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function setSess2(dayIdx,sk){ST.sched[dayIdx]=sk;sv('sched2',JSON.stringify(ST.sched));closeModal();sH(rSem());}
+function toggleProg2(key){ST.progOpen[key]=!ST.progOpen[key];sH(rProg());}
+function renderProgItem2(ex,principal){
+  const lv=Math.min(getLv2(ex.id),ex.v.length-1);const rir=principal?'1-2':'1-3';
+  const hist=getLvlHist(ex.id);const isOpen=!!ST.progOpen['lvl_'+ex.id];
+  let h='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,0.06)">'
+    +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+ex.n+'</div>'
+    +'<div style="display:flex;gap:4px;margin-bottom:8px">';
+  for(let i=0;i<ex.v.length;i++)h+='<div style="flex:1;height:4px;border-radius:99px;background:'+(i<=lv?'#007AFF':'rgba(0,0,0,0.08)')+'"></div>';
+  h+='</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:#007AFF;margin-bottom:3px">▸ '+ex.v[lv]+' <span style="font-weight:400;color:#999;font-size:11px">Nivel '+(lv+1)+'/'+ex.v.length+'</span></div>';
+  h+='<div style="font-size:11px;color:#999;margin-bottom:8px">Objetivo: '+ex.reps+' · RIR '+rir+'</div>';
+  h+='<div style="display:flex;gap:6px;margin-bottom:8px">';
+  if(lv>0)h+='<button onclick="setExLevel(\''+ex.id+'\','+(lv-1)+','+(ex.v.length-1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">← Bajar</button>';
+  if(lv<ex.v.length-1)h+='<button onclick="setExLevel(\''+ex.id+'\','+(lv+1)+','+(ex.v.length-1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid #007AFF;background:rgba(0,0,0,0.01);color:#007AFF;font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">Subir →</button>';
+  h+='</div>';
+  if(hist.length){
+    h+='<div onclick="toggleProg2(\'lvl_'+ex.id+'\')" style="font-size:11px;color:#999;cursor:pointer;text-align:center;padding:4px 0">'+(isOpen?'Ocultar evolución ∧':'Ver evolución ('+hist.length+') ∨')+'</div>';
+    if(isOpen){
+      h+='<div style="margin-top:4px">';
+      hist.forEach(function(r,i){h+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,0.04);color:#666">'
+        +'<span>'+fmtMedDate(r.date)+'</span>'
+        +'<span style="display:flex;align-items:center;gap:6px"><span style="font-weight:600">Nivel '+(r.level+1)+' — '+ex.v[r.level]+'</span>'
+        +'<button onclick="deleteLvlEntry(\''+ex.id+'\','+i+')" style="background:none;border:none;color:#FF3B30;font-size:12px;cursor:pointer;padding:2px">🗑</button></span></div>';});
+      h+='<div onclick="resetExProgress(\''+ex.id+'\')" style="text-align:center;font-size:11px;color:#FF3B30;cursor:pointer;padding:8px 0 0">↺ Reiniciar progreso de este ejercicio</div>';
+      h+='</div>';
+    }
+  }
+  h+='</div>';
+  return h;
+}
+
 // ─── STATE ─────────────────────────────────────────
 let ST={
-  tab:'hoy',week:1,meso:1,
+  tab:'hoy',
   sched:[...DEFAULT_SCHED],
-  xlv:{},
+  lvl:{},
   done:new Set(),mdone:new Set(),
   calM:today.getMonth(),calY:today.getFullYear(),
   progOpen:{},
+  express:false,
 };
 
 function sv(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -622,29 +819,17 @@ function gl(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 
 function init(){
   const sc=gl('sched2');if(sc)try{ST.sched=JSON.parse(sc);}catch(e){}
-  const wk=gl('wk');if(wk)ST.week=parseInt(wk)||1;
-  const ms=gl('meso');if(ms)ST.meso=parseInt(ms)||1;
-  const xl=gl('xlv2');if(xl){try{ST.xlv=JSON.parse(xl);}catch(e){}}
-  // Set default levels (L4 = index 3 for empuje, L3 = index 2 for rest)
-  function defLv(id,lv){if(ST.xlv[id]===undefined)ST.xlv[id]=lv;}
-  defLv('tf1',3);defLv('tf2',3);defLv('tf3',2);defLv('tf4',2); // empuje L4, tracción L3
-  defLv('tf5',2);defLv('tf6',2);
-  defLv('th1',3);defLv('th2',3);defLv('th3',2);defLv('th4',2);
-  defLv('th5',2);defLv('th6',2);
-  // Legs: all start L3 (index 2)
-  ['pf1','pf2','pf3','pf4','pf5','ph1','ph2','ph3','ph4','ph5'].forEach(id=>defLv(id,2));
-  // Core and accessories: L3
-  [...CORE_POOL,...PF_ACC_POOL,...CORE_SESSION].forEach(ex=>defLv(ex.id,2));
-  sv('xlv2',JSON.stringify(ST.xlv));
+  const lv=gl('lvl2');if(lv)try{ST.lvl=JSON.parse(lv);}catch(e){}
   const dn=gl('dn_'+tstr);if(dn)try{ST.done=new Set(JSON.parse(dn));}catch(e){}
   const md=gl('md_'+tstr);if(md)try{ST.mdone=new Set(JSON.parse(md));}catch(e){}
+  ST.express=gl('express_'+tstr)==='1';
   render();
 }
 
 function render(){
   const hd=document.getElementById('hdr');
   document.getElementById('tb').style.display='block';
-  hd.innerHTML='<div style="font-size:11px;font-weight:700;color:#999;letter-spacing:.05em">M'+ST.meso+'/'+TOTAL_MESOS+' · S'+ST.week+' · '+WEEK_LABELS[ST.week-1].toUpperCase()+'</div>'
+  hd.innerHTML='<div style="font-size:11px;font-weight:700;color:#999;letter-spacing:.05em">TRAIN.</div>'
     +'<div style="font-size:20px;font-weight:800;padding:2px 0 10px;color:#111">'+today.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})+'</div>';
   sH(rTab());updateFab();
 }
@@ -689,51 +874,26 @@ function rTab(){
   return rHoy();
 }
 
-function getLv(id){return ST.xlv[id]!==undefined?ST.xlv[id]:2;}
-
-function getVariant(ex){
-  const lv=Math.min(getLv(ex.id),ex.v.length-1);
-  return {name:ex.v[lv],lv:lv};
-}
-
-function getExReps(ex,sdata){
-  const load=sdata.acc&&sdata.acc.includes(ex)?accLoad(ST.week,ST.meso,sdata.type):dupLoad(ST.week,ST.meso,sdata.type);
-  const side=ex.perSide?'/lado':'';
-  return load.sets+'x'+load.reps+side;
-}
-
-function getExRest(ex,sdata){
-  const load=sdata.acc&&sdata.acc.includes(ex)?accLoad(ST.week,ST.meso,sdata.type):dupLoad(ST.week,ST.meso,sdata.type);
-  return load.rest;
-}
-
-function getWeeklyItem(pool,seed){
-  const idx=(ST.week-1+ST.meso-1+seed)%pool.length;
-  return pool[Math.max(0,idx)];
-}
-
-function getDayExtras(sk){
-  const isLeg=(sk==='pf'||sk==='ph');
-  const core=getWeeklyItem(CORE_POOL,sk.charCodeAt(0)%5);
-  let acc=null;
-  if(isLeg){
-    const pool=PF_ACC_POOL.filter(a=>!a.minMeso||a.minMeso<=ST.meso);
-    acc=getWeeklyItem(pool,sk.charCodeAt(1)%pool.length);
-  }
-  return {core,acc};
-}
-
 // ── HOY ───────────────────────────────────────────
 function rHoy(){
-  const sk=ST.sched[sidx];
+  const sk=ST.sched[todayIdx()];
   let h='';
   const mobDone=MOB.filter(m=>ST.mdone.has(m.id)).length;
-  h+='<div class="slbl">Mañana</div>';
+  h+='<div class="slbl">Movilidad</div>';
   h+='<div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;border-color:rgba(52,199,89,0.3)" onclick="go(\'mob\')">'
     +'<div style="width:36px;height:36px;border-radius:10px;background:rgba(52,199,89,0.08);display:flex;align-items:center;justify-content:center;font-size:18px">☀️</div>'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Movilidad matutina</div>'
     +'<div style="font-size:11px;color:#999">'+mobDone+'/'+MOB.length+' completados</div></div>'
     +'<div style="font-size:18px;color:#999">›</div></div>';
+
+  if(sk){
+    h+='<div class="card" style="display:flex;align-items:center;gap:10px" onclick="toggleExpress()">'
+      +'<div style="width:36px;height:36px;border-radius:10px;background:'+(ST.express?'rgba(255,159,10,0.12)':'rgba(0,0,0,0.04)')+';display:flex;align-items:center;justify-content:center;font-size:18px">⚡</div>'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Modo exprés</div>'
+      +'<div style="font-size:11px;color:#999">'+(ST.express?'Activado — menos series y metabólico más corto':'Menos tiempo hoy: reduce series y metabólico')+'</div></div>'
+      +'<div style="width:44px;height:26px;border-radius:99px;background:'+(ST.express?'#FF9F0A':'rgba(0,0,0,0.12)')+';position:relative;transition:background .2s;flex-shrink:0">'
+      +'<div style="width:20px;height:20px;border-radius:50%;background:#fff;position:absolute;top:3px;left:'+(ST.express?'21px':'3px')+';transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div></div></div>';
+  }
 
   if(!sk){
     h+='<div style="text-align:center;padding:32px 16px">'
@@ -745,113 +905,8 @@ function rHoy(){
       +'<button class="btn" onclick="showRc(\'espalda_prev\')">Espalda — prevención</button></div>';
     return h;
   }
-
-  if(sk==='co'){return h+rCoreSess();}
-  const sdata=SESS[sk];
-  const extras=getDayExtras(sk);
-  const allIds=[...sdata.base.map(e=>e.id),...sdata.acc.map(e=>e.id),extras.core.id];
-  if(extras.acc)allIds.push(extras.acc.id);
-  const done=allIds.filter(id=>ST.done.has(id)).length;
-  const pct=Math.round(done/allIds.length*100);
-  const comp=gl('completed_'+tstr)===sk;
-
-  h+='<div class="slbl">Sesión de hoy</div>';
-  h+='<div class="card" style="border-color:'+sdata.color+'">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-    +'<div style="width:8px;height:8px;border-radius:50%;background:'+sdata.color+'"></div>'
-    +'<div style="font-size:14px;font-weight:700">'+sdata.name+'</div>'
-    +'<div style="font-size:11px;color:#999;margin-left:auto">M'+ST.meso+' S'+ST.week+' '+WEEK_LABELS[ST.week-1]+'</div></div>'
-    +'<div style="display:flex;justify-content:space-between;margin-bottom:5px">'
-    +'<span style="font-size:11px;color:#999">Progreso</span>'
-    +'<span style="font-size:11px;font-weight:700;color:'+sdata.color+'">'+done+'/'+allIds.length+'</span></div>'
-    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:'+sdata.color+'"></div></div></div>';
-
-  h+='<div class="slbl">Ejercicios base</div>';
-  h+=renderExList(sdata.base,sdata,false);
-  if(sdata.acc.length){h+='<div class="slbl">Accesorios</div>';h+=renderExList(sdata.acc,sdata,true);}
-  if(extras.acc){h+='<div class="slbl">Complementario rotativo</div>';h+=renderExListSingle(extras.acc,sdata);}
-
-
-  h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:4px" onclick="markCompleted(\''+sk+'\')">'
-    +(comp?'✓ Completado — pulsa para desmarcar':'Marcar entrenamiento como completado')+'</button>';
-  h+='<button class="btn" onclick="postponeDay()" style="color:#999;font-size:12px">Mover al próximo día de descanso</button>';
-  return h;
-}
-
-function renderExList(exs,sdata,isAcc){
-  return exs.map(ex=>renderExCard(ex,sdata,isAcc)).join('');
-}
-
-function renderExListSingle(ex,sdata){
-  // For rotativo items, use core/acc load
-  const clv=Math.min(getLv(ex.id),ex.v.length-1);
-  const cl=coreLoad(ST.week,ST.meso);
-  const side=ex.perSide?'/lado':'';
-  const rStr=cl.sets+'x'+cl.reps+side;
-  const ok=ST.done.has(ex.id);
-  return '<div class="exc'+(ok?' ok':'')+'" onclick="tapEx(\''+ex.id+'\')">'
-    +'<div style="flex:1">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-    +'<div class="xn'+(ok?' ok':'')+'">'+ex.v[clv]+'</div>'
-    +'<div class="xr" style="color:'+sdata.color+'">'+rStr+'</div></div>'
-    +'<div style="margin-top:4px">'
-    +'<span class="xt" style="background:'+sdata.bg+';color:'+sdata.color+'">'+ex.pat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">L'+(clv+1)+'/6</span>'
-    +'</div>'
-    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+cl.rest+' descanso</div>'
-    +'<div class="xd" id="xd_'+ex.id+'"><div style="margin-bottom:3px">'+ex.desc+'</div><div style="color:#007AFF">💡 '+ex.tip+'</div></div>'
-    +'<button onclick="event.stopPropagation();toggleDesc(\''+ex.id+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;padding:3px 0 0;font-family:-apple-system,sans-serif">▼ Ver descripción</button>'
-    +'</div><div class="chk'+(ok?' ok':'')+'">✓</div></div>';
-}
-
-function renderExCard(ex,sdata,isAcc){
-  const {name,lv}=getVariant(ex);
-  const load=getExLoad(ex,sdata,isAcc,ST.week,ST.meso);
-  const side=(load.perSide||ex.perSide)?'/lado':'';
-  const rStr=load.sets+'x'+load.reps+side;
-  const noteStr=load.note||'';
-  const ok=ST.done.has(ex.id);
-  return '<div class="exc'+(ok?' ok':'')+'" onclick="tapEx(\''+ex.id+'\')">'
-    +'<div style="flex:1">'
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
-    +'<div class="xn'+(ok?' ok':'')+'">'+name+'</div>'
-    +'<div class="xr" style="color:'+sdata.color+'">'+rStr+'</div></div>'
-    +'<div style="margin-top:4px">'
-    +'<span class="xt" style="background:'+sdata.bg+';color:'+sdata.color+'">'+ex.pat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">L'+(lv+1)+'/6</span>'
-    +'</div>'
-    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+load.rest+' descanso'+(noteStr?' · <span style="color:#007AFF">'+noteStr+'</span>':'')+'</div>'
-    +'<div class="xd" id="xd_'+ex.id+'"><div style="margin-bottom:3px">'+ex.desc+'</div><div style="color:#007AFF">💡 '+ex.tip+'</div></div>'
-    +'<button onclick="event.stopPropagation();toggleDesc(\''+ex.id+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;padding:3px 0 0;font-family:-apple-system,sans-serif">▼ Ver descripción</button>'
-    +'</div><div class="chk'+(ok?' ok':'')+'">✓</div></div>';
-}
-
-function toggleDesc(id){const el=document.getElementById('xd_'+id);if(el)el.classList.toggle('show');}
-function tapEx(id){
-  if(ST.done.has(id))ST.done.delete(id);else ST.done.add(id);
-  sv('dn_'+tstr,JSON.stringify([...ST.done]));sH(rTab());
-}
-
-function markCompleted(sk){
-  const key='completed_'+tstr;
-  if(gl(key)===sk){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
-  else{
-    const sdata=SESS[sk];const extras=getDayExtras(sk);
-    [...sdata.base,...sdata.acc].forEach(e=>ST.done.add(e.id));
-    ST.done.add(extras.core.id);if(extras.acc)ST.done.add(extras.acc.id);
-    sv('dn_'+tstr,JSON.stringify([...ST.done]));sv(key,sk);
-    showCel('💪','¡Sesión completada!');
-  }
-  sH(rTab());
-}
-
-function postponeDay(){
-  for(let d=sidx+1;d<7;d++){
-    if(!ST.sched[d]){const tmp=ST.sched[sidx];ST.sched[sidx]=null;ST.sched[d]=tmp;sv('sched2',JSON.stringify(ST.sched));sH(rTab());return;}
-  }
-  alert('No hay día de descanso disponible esta semana.');
+  if(sk==='mc')return h+rMovCore();
+  return h+rSessionCard(sk);
 }
 
 function showCel(ico,txt){
@@ -862,86 +917,6 @@ function showCel(ico,txt){
   setTimeout(()=>{el.className='hide';setTimeout(()=>{el.className='';},300);},2200);
 }
 
-// ── SEMANA ─────────────────────────────────────────
-function rSem(){
-  let h='<div class="slbl">Esta semana — S'+ST.week+' '+WEEK_LABELS[ST.week-1]+'</div>';
-  for(let i=0;i<7;i++){
-    const sk=ST.sched[i];const sm=sk?SM[sk]:null;const sdata=sk?SESS[sk]:null;
-    const isT=i===sidx;
-    const d=new Date(today);d.setDate(today.getDate()-sidx+i);
-    const ds=d.toDateString();const comp=gl('completed_'+ds);
-    h+='<div class="dayr'+(isT?' today':'')+'" onclick="toggleDayDetail('+i+')" id="dayrow-'+i+'">'
-      +'<div class="daydot" style="background:'+(sm?sm.bg:'rgba(0,0,0,0.04)')+';color:'+(sm?sm.c:'#ccc')+'">'+DNAMES[i].slice(0,2)+'</div>'
-      +'<div style="flex:1">'
-      +'<div style="font-size:13px;font-weight:600">'+DNAMES[i]+(isT?' <span style="font-size:10px;background:rgba(0,122,255,0.1);color:#007AFF;padding:1px 7px;border-radius:99px">Hoy</span>':'')+'</div>'
-      +'<div style="font-size:11px;color:#999;margin-top:1px">'+(sdata?sdata.name:'Descanso')+'</div></div>'
-      +(comp?'<span style="font-size:16px">✅</span>':'')
-      +'<button onclick="event.stopPropagation();openSessModal('+i+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;flex-shrink:0">✏️</button>'
-      +'</div>'
-      +'<div id="detail-'+i+'" style="display:none;padding:0 0 4px"></div>';
-  }
-  return h;
-}
-
-function toggleDayDetail(i){
-  const det=document.getElementById('detail-'+i);if(!det)return;
-  if(det.style.display==='block'){det.style.display='none';return;}
-  document.querySelectorAll('[id^="detail-"]').forEach(d=>d.style.display='none');
-  const sk=ST.sched[i];
-  if(!sk){
-    det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Día de descanso.</div>';
-  } else if(sk==='co'){
-    let html='<div style="padding:6px 4px">';
-    CORE_SESSION.concat(CORE_POOL).forEach(function(ex){
-      const lv=Math.min(getLv(ex.id),ex.v.length-1);
-      const cl=coreLoad(ST.week,ST.meso,ex.pat);
-      const side=(cl.perSide||ex.perSide)?'/lado':'';
-      html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.05)"><span style="color:#444">'+ex.v[lv]+'</span><span style="color:#3A3A3A;font-weight:600">'+cl.sets+'x'+cl.reps+side+'</span></div>';
-    });
-    html+='</div>';
-    det.innerHTML=html;
-  } else {
-    const sdata=SESS[sk];const extras=getDayExtras(sk);
-    let html='<div style="padding:6px 4px">';
-    const isAccEx=(ex)=>sdata.acc.includes(ex);
-    [...sdata.base,...sdata.acc].forEach(ex=>{
-      const {name}=getVariant(ex);
-      const exLoad=getExLoad(ex,sdata,isAccEx(ex),ST.week,ST.meso);
-      const side=(exLoad.perSide||ex.perSide)?'/lado':'';
-      html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.05)"><span style="color:#444">'+name+'</span><span style="color:'+sdata.color+';font-weight:600">'+exLoad.sets+'x'+exLoad.reps+side+'</span></div>';
-    });
-    if(extras.acc){
-      const alv=Math.min(getLv(extras.acc.id),extras.acc.v.length-1);
-      const ccl2=coreLoad(ST.week,ST.meso,'Anti-rotación');
-      html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;color:#555"><span>'+extras.acc.v[alv]+' (compl.)</span><span>'+ccl2.sets+'x'+ccl2.reps+(extras.acc.perSide?'/lado':'')+'</span></div>';
-    }
-    html+='</div>';
-    det.innerHTML=html;
-  }
-  det.style.display='block';
-}
-
-function openSessModal(dayIdx){
-  document.getElementById('modal-title').textContent='Cambiar — '+DNAMES[dayIdx];
-  const cur=ST.sched[dayIdx];let html='';
-  Object.keys(SM).forEach(sk=>{
-    const sm=SM[sk];const sdata=SESS[sk];const isC=cur===sk;
-    html+='<div class="opt-row" onclick="setSess('+dayIdx+',\''+sk+'\')">'
-      +'<div class="opt-dot" style="background:'+sm.c+'"></div>'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?sm.c:'#111')+'">'+sdata.name+'</div></div>'
-      +(isC?'<span style="color:'+sm.c+'">✓</span>':'')+'</div>';
-  });
-  html+='<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Opciones</div>';
-  html+='<div class="opt-row" onclick="setSess('+dayIdx+',null)"><div class="opt-dot" style="background:#ccc"></div>'
-    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(cur===null?'700':'400')+'">Descanso</div></div>'+(cur===null?'<span>✓</span>':'')+'</div>';
-  html+='<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Avanzado</div>';
-  const hiSm=SM.hi||{c:'#FF3B30'};const hiSdata=SESS.hi;
-  const isHi=cur==='hi';
-  html+='<div class="opt-row" onclick="setSess('+dayIdx+',\'hi\')"><div class="opt-dot" style="background:#FF3B30"></div><div style="flex:1"><div style="font-size:13px;font-weight:'+(isHi?'700':'400')+';color:'+(isHi?'#FF3B30':'#111')+'">HIIT Metabólico</div><div style="font-size:11px;color:#999">Cuando te sientas listo</div></div>'+(isHi?'<span style="color:#FF3B30">✓</span>':'')+'</div>';
-  document.getElementById('modal-body').innerHTML=html;
-  document.getElementById('modal').classList.add('show');
-}
-function setSess(dayIdx,sk){ST.sched[dayIdx]=sk;sv('sched2',JSON.stringify(ST.sched));closeModal();sH(rSem());}
 function closeModal(){document.getElementById('modal').classList.remove('show');}
 
 // ── MOVILIDAD ──────────────────────────────────────
@@ -1047,83 +1022,39 @@ function completeAllRc(){
 
 function rProg(){
   let h='';
-  if(sidx===6){
-    let sess=0,mob=0;
-    for(let i=0;i<7;i++){const d=new Date(today);d.setDate(today.getDate()-6+i);const ds=d.toDateString();if(gl('completed_'+ds))sess++;if(gl('md_'+ds))mob++;}
-    h+='<div class="slbl">Resumen semanal</div>';
-    h+='<div class="card" style="display:flex"><div class="sum-stat"><div class="sum-num">'+sess+'</div><div class="sum-lbl">sesiones</div></div>'
-      +'<div style="width:1px;background:rgba(0,0,0,0.08);margin:12px 0"></div>'
-      +'<div class="sum-stat"><div class="sum-num" style="color:#34C759">'+mob+'</div><div class="sum-lbl">movilidades</div></div></div>';
-  }
-  if(ST.meso>=TOTAL_MESOS&&ST.week===4){
-    h+='<div class="card" style="background:rgba(255,107,53,0.06);border-color:rgba(255,107,53,0.3);text-align:center;padding:20px">'
-      +'<div style="font-size:32px;margin-bottom:8px">🏆</div>'
-      +'<div style="font-size:15px;font-weight:800;margin-bottom:6px">¡Programa completado!</div>'
-      +'<div style="font-size:12px;color:#666;line-height:1.6">Has terminado los 6 mesociclos (24 semanas).<br>Vuelve aquí para crear tu siguiente bloque.</div></div>';
-  }
   h+='<div class="slbl">Medidas corporales</div>';
   h+='<div class="card" style="cursor:pointer;display:flex;align-items:center;gap:10px" onclick="showMedidas()">'
     +'<div style="width:36px;height:36px;border-radius:10px;background:rgba(0,122,255,0.08);display:flex;align-items:center;justify-content:center;font-size:18px">📏</div>'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Medidas corporales</div>'
     +'<div style="font-size:11px;color:#999;margin-top:2px">'+getMedidasSummary()+'</div></div>'
     +'<div style="font-size:18px;color:#999">›</div></div>';
-  h+='<div class="slbl">Niveles · M'+ST.meso+'/'+TOTAL_MESOS+' S'+ST.week+'</div>';
-  const cats=Object.keys(SESS).filter(sk=>sk!=='hi'&&sk!=='co');
-  cats.forEach(sk=>{
-    const sdata=SESS[sk];
-    const allExs=[...sdata.base,...sdata.acc];
-    const isOpen=!!ST.progOpen[sk];
+  h+='<div class="slbl">Ejercicios</div>';
+  Object.keys(EXLIB).forEach(function(pat){
+    const grp=EXLIB[pat];const isOpen=!!ST.progOpen['pat_'+pat];
     h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">'
-      +'<div onclick="toggleProg(\''+sk+'\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:'+sdata.color+'"></div>'
-      +'<div style="font-size:13px;font-weight:700;flex:1">'+sdata.name+'</div>'
+      +'<div onclick="toggleProg2(\'pat_'+pat+'\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer">'
+      +'<div style="font-size:13px;font-weight:700;flex:1">'+grp.name+(grp.principal?'':' <span style="font-weight:400;color:#999;font-size:11px">(accesorio)</span>')+'</div>'
       +'<div style="font-size:18px;color:#999">'+(isOpen?'∧':'∨')+'</div></div>';
     if(isOpen){
       h+='<div style="padding:0 14px 14px">';
-      allExs.forEach(ex=>{h+=renderProgItem(ex,sdata.color);});
-      h+='</div>';
+      grp.ex.forEach(function(ex){h+=renderProgItem2(ex,grp.principal);});
+      h+='<div style="padding-top:2px">';
+      h+='<div style="font-size:11px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Ejercicio activo por sesión</div>';
+      sessionsUsingPattern(pat).forEach(function(s){
+        const blkDef=TEMPLATES[s.sk].blocks.find(function(x){return x.pat===pat;});
+        const rotated=getRotatedExercises(s.sk,pat,blkDef.count);
+        const ex=getExFor(s.sk,pat,s.slotIdx,rotated[s.slotIdx]);
+        const sm=SESSDEF[s.sk];
+        h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0">'
+          +'<div style="flex:1;font-size:12px"><span style="color:'+sm.color+';font-weight:600">'+sm.name+'</span> · '+ex.n+'</div>'
+          +'<button onclick="openExPicker(\''+s.sk+'\',\''+pat+'\','+s.slotIdx+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif">🔀</button></div>';
+      });
+      h+='</div></div>';
     }
     h+='</div>';
   });
-  h+='<div class="slbl">Core (Miércoles)</div>';
-  h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">'
-    +'<div onclick="toggleProg(\'coday\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer">'
-    +'<div style="width:8px;height:8px;border-radius:50%;background:#3A3A3A"></div>'
-    +'<div style="font-size:13px;font-weight:700;flex:1">Core unificado</div>'
-    +'<div style="font-size:18px;color:#999">'+(ST.progOpen.coday?'∧':'∨')+'</div></div>';
-  if(ST.progOpen.coday){
-    h+='<div style="padding:0 14px 14px">';
-    h+='<div style="font-size:10px;font-weight:700;color:#3A3A3A;text-transform:uppercase;padding:4px 0 8px;letter-spacing:.05em">Core</div>';
-    CORE_SESSION.forEach(function(ex){h+=renderProgItem(ex,'#3A3A3A');});
-    h+='<div style="font-size:10px;font-weight:700;color:#555;text-transform:uppercase;padding:8px 0 4px;letter-spacing:.05em">Rotativo</div>';
-    CORE_POOL.forEach(function(ex){h+=renderProgItem(ex,'#555');});
-    h+='</div>';
-  }
-  h+='</div>';
-  h+='</div>';
   return h;
 }
-
-function renderProgItem(ex,color){
-  const lv=Math.min(getLv(ex.id),ex.v.length-1);
-  let h='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,0.06)">'
-    +'<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">'+ex.pat+'</div>'
-    +'<div style="display:flex;gap:4px;margin-bottom:8px">';
-  for(let i=0;i<ex.v.length;i++)h+='<div style="flex:1;height:4px;border-radius:99px;background:'+(i<=lv?color:'rgba(0,0,0,0.08)')+'"></div>';
-  h+='</div>';
-  if(lv>0)h+='<div style="font-size:11px;color:#999;margin-bottom:3px">Anterior: '+ex.v[lv-1]+'</div>';
-  h+='<div style="font-size:13px;font-weight:700;color:'+color+';margin-bottom:3px">▸ '+ex.v[lv]+' <span style="font-weight:400;color:#999;font-size:11px">Nivel '+(lv+1)+'/6</span></div>';
-  if(lv<ex.v.length-1)h+='<div style="font-size:11px;color:#999;margin-bottom:8px">Siguiente: '+ex.v[lv+1]+'</div>';
-  else h+='<div style="font-size:11px;color:#34C759;margin-bottom:8px">🏆 Nivel máximo</div>';
-  h+='<div style="display:flex;gap:6px">';
-  if(lv>0)h+='<button onclick="setLv(\''+ex.id+'\','+(lv-1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">← Bajar</button>';
-  if(lv<ex.v.length-1)h+='<button onclick="setLv(\''+ex.id+'\','+(lv+1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid '+color+';background:rgba(0,0,0,0.01);color:'+color+';font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">Subir →</button>';
-  h+='</div></div>';
-  return h;
-}
-
-function toggleProg(sk){ST.progOpen[sk]=!ST.progOpen[sk];sH(rProg());}
-function setLv(id,lv){ST.xlv[id]=lv;sv('xlv2',JSON.stringify(ST.xlv));sH(rProg());}
 
 // ── MEDIDAS ────────────────────────────────────────
 var MEDIDAS=[
@@ -1249,21 +1180,14 @@ function rCal(){
     +'<button onclick="calNav(-1)" style="background:none;border:none;font-size:22px;cursor:pointer;color:#007AFF;padding:0 8px">‹</button>'
     +'<div style="font-size:15px;font-weight:700">'+months[m]+' '+y+'</div>'
     +'<button onclick="calNav(1)" style="background:none;border:none;font-size:22px;cursor:pointer;color:#007AFF;padding:0 8px">›</button></div>';
-  h+='<div class="card" style="margin-bottom:12px;text-align:center">'
-    +'<div style="font-size:11px;color:#999">Mesociclo '+ST.meso+'/'+TOTAL_MESOS+'</div>'
-    +'<div style="font-size:16px;font-weight:800;margin-top:2px">Semana '+ST.week+' — '+WEEK_LABELS[ST.week-1]+'</div>'
-    +'<div style="display:flex;gap:4px;margin-top:10px">';
-  for(let w=1;w<=4;w++)h+='<div style="flex:1;height:4px;border-radius:99px;background:'+(w<=ST.week?'#007AFF':'rgba(0,0,0,0.08)')+'"></div>';
-  h+='</div></div>';
   h+='<div class="cal-lbl">';['L','M','X','J','V','S','D'].forEach(d=>h+='<span>'+d+'</span>');h+='</div><div class="cal-grid">';
   const first=new Date(y,m,1).getDay();const off=first===0?6:first-1;const days=new Date(y,m+1,0).getDate();
   for(let i=0;i<off;i++)h+='<div></div>';
   for(let d=1;d<=days;d++){
     const ds=new Date(y,m,d).toDateString();const isT=ds===tstr;
-    const comp=gl('completed_'+ds);const sport=gl('sport_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);
-    const sm=comp&&SM[comp]?SM[comp]:null;const isFuture=new Date(y,m,d)>today;
+    const sport=gl('sport_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);
+    const isFuture=new Date(y,m,d)>today;
     const dots=[];
-    if(sm)dots.push(sm.c);
     if(mob)dots.push('#34C759');
     if(sport)dots.push('#FF3B30');
     h+='<div class="cal-d'+(isT?' today':'')+'" onclick="'+(isFuture?'':'calDay(\''+ds+'\')')+'" style="'+(isFuture?'opacity:.35':'cursor:pointer')+'">'
@@ -1272,26 +1196,18 @@ function rCal(){
   }
   h+='</div>';
   h+='<div style="display:flex;gap:12px;padding:14px 2px;flex-wrap:wrap">';
-  Object.keys(SM).forEach(sk=>h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:'+SM[sk].c+'"></div><div style="font-size:10px;color:#999">'+SESS[sk].name+'</div></div>');
-  h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#34C759"></div><div style="font-size:10px;color:#999">Movilidad/Deporte</div></div></div>';
+  h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#34C759"></div><div style="font-size:10px;color:#999">Movilidad</div></div>';
+  h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#FF3B30"></div><div style="font-size:10px;color:#999">Deporte</div></div></div>';
   return h;
 }
 function calNav(dir){ST.calM+=dir;if(ST.calM>11){ST.calM=0;ST.calY++;}else if(ST.calM<0){ST.calM=11;ST.calY--;}sH(rCal());}
 
 function calDay(ds){
-  const comp=gl('completed_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);const sport=gl('sport_'+ds);
+  const mob=gl('mob_completed_'+ds)||gl('md_'+ds);const sport=gl('sport_'+ds);
   const d=new Date(ds);const dayName=DNAMES[d.getDay()===0?6:d.getDay()-1];
   let h='<button class="btn" onclick="sH(rCal())" style="color:#007AFF;border-color:rgba(0,122,255,0.2)">← Volver</button>';
   h+='<div class="slbl">'+dayName+', '+d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})+'</div>';
-  h+='<div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Entrenamiento</div>';
-  Object.keys(SM).forEach(sk=>{
-    const sdata=SESS[sk];const sm=SM[sk];const isC=comp===sk;
-    h+='<div onclick="toggleCalSess(\''+ds+'\',\''+sk+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:6px;background:'+(isC?sm.bg:'rgba(0,0,0,0.03)')+';cursor:pointer;border:1px solid '+(isC?sm.c+'44':'rgba(0,0,0,0.06)')+'">'
-      +'<div style="width:10px;height:10px;border-radius:50%;background:'+sm.c+'"></div>'
-      +'<div style="flex:1;font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?sm.c:'#111')+'">'+sdata.name+'</div>'
-      +(isC?'<span style="color:'+sm.c+'">✓</span>':'')+'</div>';
-  });
-  h+='</div><div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Movilidad</div>'
+  h+='<div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Movilidad</div>'
     +'<div onclick="toggleCalMob(\''+ds+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(mob?'rgba(52,199,89,0.08)':'rgba(0,0,0,0.03)')+';cursor:pointer;border:1px solid '+(mob?'rgba(52,199,89,0.3)':'rgba(0,0,0,0.06)')+'">'
     +'<div style="width:10px;height:10px;border-radius:50%;background:#34C759"></div>'
     +'<div style="flex:1;font-size:13px;font-weight:'+(mob?'700':'400')+';color:'+(mob?'#1a7a38':'#111')+'">Movilidad matutina</div>'
@@ -1308,7 +1224,6 @@ function calDay(ds){
   }
   sH(h);
 }
-function toggleCalSess(ds,sk){const cur=gl('completed_'+ds);if(cur===sk)localStorage.removeItem('completed_'+ds);else sv('completed_'+ds,sk);calDay(ds);}
 function deleteCalSport(ds){localStorage.removeItem('sport_'+ds);calDay(ds);showCel('🗑','Deporte eliminado');}
  function toggleCalMob(ds){const k='mob_completed_'+ds;if(gl(k))localStorage.removeItem(k);else sv(k,'1');calDay(ds);}
 function openSportModal(targetDs){
@@ -1331,27 +1246,14 @@ function openSportForDay(ds){
 
 // ── AJUSTES ────────────────────────────────────────
 function rCfg(){
-  let h='<div class="slbl">Programa</div>';
-  h+='<div class="card">'
-    +'<div style="font-size:12px;color:#999;margin-bottom:4px">Mesociclo</div>'
-    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">'
-    +'<div style="font-size:22px;font-weight:800;flex:1">'+ST.meso+' <span style="font-size:13px;font-weight:400;color:#999">de '+TOTAL_MESOS+'</span></div>'
-    +'<button onclick="changeMeso(-1)" style="width:34px;height:34px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:18px;cursor:pointer">−</button>'
-    +'<button onclick="changeMeso(1)" style="width:34px;height:34px;border-radius:10px;border:1px solid #007AFF;background:#007AFF;color:#fff;font-size:18px;cursor:pointer">+</button></div>'
-    +'<div style="font-size:12px;color:#999;margin-bottom:6px">Semana del mesociclo — <strong>'+WEEK_LABELS[ST.week-1]+'</strong></div>'
-    +'<div style="display:flex;gap:6px">';
-  for(let w=1;w<=4;w++)h+='<button onclick="setWeek('+w+')" style="flex:1;padding:10px 4px;border-radius:10px;border:1px solid '+(ST.week===w?'#007AFF':'rgba(0,0,0,0.1)')+';background:'+(ST.week===w?'#007AFF':'#fff')+';color:'+(ST.week===w?'#fff':'#111')+';font-size:12px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif">'+(w===4?'Lig':w)+'</button>';
-  h+='</div></div>';
-  h+='<div class="slbl">Datos</div><div class="card">'
+  let h='<div class="slbl">Datos</div><div class="card">'
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v2.9.4</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.4.0</div>';
   return h;
 }
 
-function setWeek(w){ST.week=w;sv('wk',String(w));render();}
-function changeMeso(d){ST.meso=Math.max(1,Math.min(TOTAL_MESOS,ST.meso+d));sv('meso',String(ST.meso));render();}
 
 function exportData(){
   const d={ver:'2.3.0',ST:{...ST,done:[...ST.done],mdone:[...ST.mdone]},ls:{}};
@@ -1365,7 +1267,17 @@ function importData(){
   try{const d=JSON.parse(s);if(d.ls)Object.keys(d.ls).forEach(k=>sv(k,d.ls[k]));alert('Progreso restaurado.');location.reload();}
   catch(e){alert('Código inválido.');}
 }
-function resetApp(){if(confirm('¿Borrar todo el progreso?')){localStorage.clear();location.reload();}}
+function resetApp(){
+  document.getElementById('modal-title').textContent='Reiniciar app';
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:13px;color:#444;margin-bottom:14px">Se borrará todo el progreso guardado en este dispositivo. No se puede deshacer.</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" style="flex:1;margin:0" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn btn-red" style="flex:1;margin:0" onclick="localStorage.clear();location.reload();">Borrar todo</button>'
+    +'</div></div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
 
 // ── SWIPE BACK ────────────────────────────────────────
 (function(){
@@ -1404,50 +1316,6 @@ function goBack(){
   const openDetail=document.querySelector('[id^="detail-"][style*="block"]');
   if(openDetail){openDetail.style.display='none';return;}
   go('hoy');
-}
-
-// ── CORE SESSION ──────────────────────────────────
-function rCoreSess(){
-  var allExs=CORE_SESSION.concat(CORE_POOL);
-  var done=allExs.filter(function(e){return ST.done.has(e.id);}).length;
-  var pct=Math.round(done/allExs.length*100);
-  var comp=gl('completed_'+tstr)==='co';
-  var h='<div class="slbl">Sesión de hoy</div>';
-  h+='<div class="card" style="border-color:#3A3A3A">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-    +'<div style="width:8px;height:8px;border-radius:50%;background:#3A3A3A"></div>'
-    +'<div style="font-size:14px;font-weight:700">Core & Prevención</div>'
-    +'<div style="font-size:11px;color:#999;margin-left:auto">M'+ST.meso+' S'+ST.week+'</div></div>'
-    +'<div style="background:rgba(58,58,58,0.05);border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:11px;color:#3A3A3A;line-height:1.6">McGill + Core complementario · ~25 min</div>'
-    +'<div style="display:flex;justify-content:space-between;margin-bottom:5px">'
-    +'<span style="font-size:11px;color:#999">Progreso</span>'
-    +'<span style="font-size:11px;font-weight:700;color:#3A3A3A">'+done+'/'+allExs.length+'</span></div>'
-    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:#3A3A3A"></div></div></div>';
-  h+='<div class="slbl">McGill — Big 3</div>';
-  CORE_SESSION.forEach(function(ex){h+=_coreCard(ex);});
-  h+='<div class="slbl">Core complementario</div>';
-  CORE_POOL.forEach(function(ex){h+=_coreCard(ex);});
-  h+='<button class="btn" style="margin-top:4px;background:'+(comp?'rgba(58,58,58,0.08)':'#3A3A3A')+';color:'+(comp?'#3A3A3A':'#fff')+';border-color:#3A3A3A;" onclick="markCompleted(\'co\')">'+(comp?'✓ Completado':'Marcar como completada')+'</button>';
-  return h;
-}
-function _coreCard(ex){
-  var lv=Math.min(getLv(ex.id),ex.v.length-1);
-  var ok=ST.done.has(ex.id);
-  var cl=coreLoad(ST.week,ST.meso,ex.pat);
-  var side=(cl.perSide||ex.perSide)?'/lado':'';
-  return '<div class="exc'+(ok?' ok':'')+'" onclick="tapEx(\''+ex.id+'\')">'
-    +'<div style="flex:1"><div style="display:flex;justify-content:space-between;gap:8px">'
-    +'<div class="xn'+(ok?' ok':'')+'">'+ex.v[lv]+'</div>'
-    +'<div class="xr" style="color:#3A3A3A">'+cl.sets+'x'+cl.reps+side+'</div></div>'
-    +'<div style="margin-top:4px">'
-    +'<span class="xt" style="background:rgba(58,58,58,0.07);color:#3A3A3A">'+ex.pat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">L'+(lv+1)+'/6</span></div>'
-    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+cl.rest+'</div>'
-    +'<div class="xd" id="xd_'+ex.id+'"><div style="margin-bottom:6px;line-height:1.6">'+ex.desc+'</div>'
-    +'<div style="background:rgba(0,122,255,0.05);border-radius:8px;padding:7px 9px;color:#007AFF;font-size:11px">💡 '+ex.tip+'</div></div>'
-    +'<button onclick="event.stopPropagation();toggleDesc(\''+ex.id+'\')" style="background:none;border:none;color:#999;font-size:11px;cursor:pointer;padding:3px 0 0;font-family:-apple-system,sans-serif">▼ Ver técnica</button>'
-    +'</div><div class="chk'+(ok?' ok':'')+'">✓</div></div>';
 }
 
 init();
