@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.5.0">
+<meta name="app-version" content="3.5.1">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -578,7 +578,7 @@ function openExPicker(sk,pat,slotIdx){
   document.getElementById('modal').classList.add('show');
 }
 function getSessionBlocks(sk){
-  const tpl=TEMPLATES[sk];const out=[];
+  const tpl=TEMPLATES[sk];if(!tpl)return[];const out=[];
   tpl.blocks.forEach(function(b){
     const rotated=getRotatedExercises(sk,b.pat,b.count);
     for(let i=0;i<b.count;i++){
@@ -837,6 +837,8 @@ function gl(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 
 function init(){
   const sc=gl('sched2');if(sc)try{ST.sched=JSON.parse(sc);}catch(e){}
+  ST.sched=ST.sched.map(function(sk){return (sk&&sk!=='mc'&&!TEMPLATES[sk])?null:sk;});
+  sv('sched2',JSON.stringify(ST.sched));
   const lv=gl('lvl2');if(lv)try{ST.lvl=JSON.parse(lv);}catch(e){}
   const dn=gl('dn_'+tstr);if(dn)try{ST.done=new Set(JSON.parse(dn));}catch(e){}
   const md=gl('md_'+tstr);if(md)try{ST.mdone=new Set(JSON.parse(md));}catch(e){}
@@ -904,7 +906,8 @@ function rTab(){
 
 // ── HOY ───────────────────────────────────────────
 function rHoy(){
-  const sk=ST.sched[todayIdx()];
+  let sk=ST.sched[todayIdx()];
+  if(sk&&sk!=='mc'&&!TEMPLATES[sk])sk=null;
   let h='';
   const mobDone=MOB.filter(m=>ST.mdone.has(m.id)).length;
   h+='<div class="slbl">Movilidad</div>';
@@ -1239,17 +1242,13 @@ function calDay(ds){
   const d=new Date(ds);const dayName=DNAMES[d.getDay()===0?6:d.getDay()-1];
   let h='<button class="btn" onclick="sH(rCal())" style="color:#007AFF;border-color:rgba(0,122,255,0.2)">← Volver</button>';
   h+='<div class="slbl">'+dayName+', '+d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})+'</div>';
-  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:'+(trainDef?'8':'0')+'px">'
-    +'<div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em">Entrenamiento</div>'
-    +(trainDef?'<button onclick="deleteCalTrain(\''+ds+'\')" style="background:rgba(255,59,48,0.08);border:1px solid rgba(255,59,48,0.2);border-radius:8px;padding:4px 10px;font-size:11px;color:#FF3B30;cursor:pointer;font-family:-apple-system,sans-serif">🗑 Eliminar</button>':'')+'</div>';
   if(trainDef){
-    h+='<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:'+trainDef.color+'"></div>'
-      +'<div style="font-size:13px;font-weight:700;color:'+trainDef.color+'">'+trainDef.name+'</div></div>';
-  } else {
-    h+='<div style="cursor:pointer" onclick="openTrainLogModal(\''+ds+'\')">'
-      +'<div style="font-size:13px;color:#007AFF;font-weight:600;text-align:center;padding:4px">+ Registrar entrenamiento</div></div>';
+    h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+      +'<div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em">Entrenamiento</div>'
+      +'<button onclick="deleteCalTrain(\''+ds+'\')" style="background:rgba(255,59,48,0.08);border:1px solid rgba(255,59,48,0.2);border-radius:8px;padding:4px 10px;font-size:11px;color:#FF3B30;cursor:pointer;font-family:-apple-system,sans-serif">🗑 Eliminar</button></div>'
+      +'<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:'+trainDef.color+'"></div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+trainDef.color+'">'+trainDef.name+'</div></div></div>';
   }
-  h+='</div>';
   h+='<div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Movilidad</div>'
     +'<div onclick="toggleCalMob(\''+ds+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(mob?'rgba(52,199,89,0.08)':'rgba(0,0,0,0.03)')+';cursor:pointer;border:1px solid '+(mob?'rgba(52,199,89,0.3)':'rgba(0,0,0,0.06)')+'">'
     +'<div style="width:10px;height:10px;border-radius:50%;background:#34C759"></div>'
@@ -1267,19 +1266,6 @@ function calDay(ds){
   }
   sH(h);
 }
-function openTrainLogModal(ds){
-  document.getElementById('modal-title').textContent='Registrar entrenamiento';
-  let html='';
-  Object.keys(SESSDEF).forEach(function(sk){
-    const sm=SESSDEF[sk];
-    html+='<div class="opt-row" onclick="setCalTrain(\''+ds+'\',\''+sk+'\')">'
-      +'<div class="opt-dot" style="background:'+sm.color+'"></div>'
-      +'<div style="flex:1"><div style="font-size:13px">'+sm.name+'</div></div></div>';
-  });
-  document.getElementById('modal-body').innerHTML=html;
-  document.getElementById('modal').classList.add('show');
-}
-function setCalTrain(ds,sk){sv('completed_'+ds,sk);closeModal();calDay(ds);showCel('✅','Entrenamiento registrado');}
 function deleteCalTrain(ds){localStorage.removeItem('completed_'+ds);calDay(ds);showCel('🗑','Entrenamiento eliminado');}
 function deleteCalSport(ds){localStorage.removeItem('sport_'+ds);calDay(ds);showCel('🗑','Deporte eliminado');}
  function toggleCalMob(ds){const k='mob_completed_'+ds;if(gl(k))localStorage.removeItem(k);else sv(k,'1');calDay(ds);}
@@ -1307,7 +1293,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.5.0</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.5.1</div>';
   return h;
 }
 
