@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.4.0">
+<meta name="app-version" content="3.5.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -598,7 +598,25 @@ function sessionsUsingPattern(pat){
   });
   return out;
 }
-function tapEx2(id){if(ST.done.has(id))ST.done.delete(id);else ST.done.add(id);sv('dn_'+tstr,JSON.stringify([...ST.done]));sH(rTab());}
+function checkAutoComplete(){
+  const sk=ST.sched[todayIdx()];
+  if(!sk)return;
+  const key='completed_'+tstr;
+  if(sk==='mc'){
+    const ids=['cm1','cm2','cm3','mc_flow_0','mc_flow_1','mc_flow_2','mc_flow_3','mc_flow_4'];
+    const allDone=ids.every(function(id){return ST.done.has(id);});
+    if(allDone&&gl(key)!=='mc'){sv(key,'mc');showCel('🎉','¡Movimiento + Core completado!');}
+    else if(!allDone&&gl(key)==='mc'){localStorage.removeItem(key);}
+    return;
+  }
+  if(!TEMPLATES[sk])return;
+  const blocks=getSessionBlocks(sk);
+  const ids=blocks.map(function(b){return sk+'_'+b.pat+'_'+b.slotIdx;}).concat([sk+'_metab']);
+  const allDone=ids.every(function(id){return ST.done.has(id);});
+  if(allDone&&gl(key)!==sk){sv(key,sk);showCel('🎉','¡'+SESSDEF[sk].name+' completado!');}
+  else if(!allDone&&gl(key)===sk){localStorage.removeItem(key);}
+}
+function tapEx2(id){if(ST.done.has(id))ST.done.delete(id);else ST.done.add(id);sv('dn_'+tstr,JSON.stringify([...ST.done]));checkAutoComplete();sH(rTab());}
 function markCompleted2(sk){
   const key='completed_'+tstr;
   if(gl(key)===sk){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
@@ -669,7 +687,7 @@ function rSessionCard(sk){
     +'<div class="chk'+(mDone?' ok':'')+'" onclick="tapEx2(\''+metabDoneId+'\')">✓</div></div>';
   h+='<button class="btn btn-blue" style="margin-top:8px" onclick="runMetabTimer(\''+sk+'\',\''+tpl.metab+'\')">▶ Iniciar temporizador</button>';
   h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:10px" onclick="markCompleted2(\''+sk+'\')">'
-    +(comp?'✓ Completado — pulsa para desmarcar':'Marcar entrenamiento como completado')+'</button>';
+    +(comp?'✓ Completado — pulsa para desmarcar':'✅ Completar todo')+'</button>';
   return h;
 }
 function runFlowTimer(){
@@ -721,7 +739,7 @@ function rMovCore(){
     +'<div class="chk'+(z2Ok?' ok':'')+'">✓</div></div>';
   const comp=gl('completed_'+tstr)==='mc';
   h+='<button class="btn '+(comp?'btn-green':'btn-orange')+'" style="margin-top:10px" onclick="markCompletedMC()">'
-    +(comp?'✓ Completado — pulsa para desmarcar':'Marcar como completada')+'</button>';
+    +(comp?'✓ Completado — pulsa para desmarcar':'✅ Completar todo')+'</button>';
   return h;
 }
 function rSem(){
@@ -826,12 +844,22 @@ function init(){
   render();
 }
 
+function safeRTab(){
+  try{return rTab();}
+  catch(e){
+    return '<div style="text-align:center;padding:40px 16px">'
+      +'<div style="font-size:44px;margin-bottom:14px">⚠️</div>'
+      +'<div style="font-size:16px;font-weight:800;margin-bottom:8px">Algo ha fallado al cargar</div>'
+      +'<div style="font-size:12px;color:#999;background:rgba(0,0,0,0.04);border-radius:10px;padding:10px;text-align:left;margin-bottom:16px;font-family:monospace;word-break:break-word">'+String(e.message||e)+'</div>'
+      +'<button class="btn btn-blue" onclick="location.reload()">Recargar app</button></div>';
+  }
+}
 function render(){
   const hd=document.getElementById('hdr');
   document.getElementById('tb').style.display='block';
   hd.innerHTML='<div style="font-size:11px;font-weight:700;color:#999;letter-spacing:.05em">TRAIN.</div>'
     +'<div style="font-size:20px;font-weight:800;padding:2px 0 10px;color:#111">'+today.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})+'</div>';
-  sH(rTab());updateFab();
+  sH(safeRTab());updateFab();
 }
 
 function sH(h,dir){
@@ -853,7 +881,7 @@ function go(t,dir){
   ST.tab=t;
   document.querySelectorAll('.tbb').forEach(b=>b.classList.remove('on'));
   const el=document.getElementById('tb-'+t);if(el)el.classList.add('on');
-  sH(rTab(),dir||null);updateFab();
+  sH(safeRTab(),dir||null);updateFab();
 }
 const TAB_ORDER={hoy:0,sem:1,mob:2,prog:3,cal:4,cfg:5};
 function goTab(t,idx){
@@ -1186,8 +1214,10 @@ function rCal(){
   for(let d=1;d<=days;d++){
     const ds=new Date(y,m,d).toDateString();const isT=ds===tstr;
     const sport=gl('sport_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);
+    const train=gl('completed_'+ds);const trainDef=train&&SESSDEF[train]?SESSDEF[train]:null;
     const isFuture=new Date(y,m,d)>today;
     const dots=[];
+    if(trainDef)dots.push(trainDef.color);
     if(mob)dots.push('#34C759');
     if(sport)dots.push('#FF3B30');
     h+='<div class="cal-d'+(isT?' today':'')+'" onclick="'+(isFuture?'':'calDay(\''+ds+'\')')+'" style="'+(isFuture?'opacity:.35':'cursor:pointer')+'">'
@@ -1196,6 +1226,7 @@ function rCal(){
   }
   h+='</div>';
   h+='<div style="display:flex;gap:12px;padding:14px 2px;flex-wrap:wrap">';
+  h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#999"></div><div style="font-size:10px;color:#999">Entrenamiento</div></div>';
   h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#34C759"></div><div style="font-size:10px;color:#999">Movilidad</div></div>';
   h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#FF3B30"></div><div style="font-size:10px;color:#999">Deporte</div></div></div>';
   return h;
@@ -1204,9 +1235,21 @@ function calNav(dir){ST.calM+=dir;if(ST.calM>11){ST.calM=0;ST.calY++;}else if(ST
 
 function calDay(ds){
   const mob=gl('mob_completed_'+ds)||gl('md_'+ds);const sport=gl('sport_'+ds);
+  const train=gl('completed_'+ds);const trainDef=train&&SESSDEF[train]?SESSDEF[train]:null;
   const d=new Date(ds);const dayName=DNAMES[d.getDay()===0?6:d.getDay()-1];
   let h='<button class="btn" onclick="sH(rCal())" style="color:#007AFF;border-color:rgba(0,122,255,0.2)">← Volver</button>';
   h+='<div class="slbl">'+dayName+', '+d.toLocaleDateString('es-ES',{day:'numeric',month:'long'})+'</div>';
+  h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:'+(trainDef?'8':'0')+'px">'
+    +'<div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em">Entrenamiento</div>'
+    +(trainDef?'<button onclick="deleteCalTrain(\''+ds+'\')" style="background:rgba(255,59,48,0.08);border:1px solid rgba(255,59,48,0.2);border-radius:8px;padding:4px 10px;font-size:11px;color:#FF3B30;cursor:pointer;font-family:-apple-system,sans-serif">🗑 Eliminar</button>':'')+'</div>';
+  if(trainDef){
+    h+='<div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:'+trainDef.color+'"></div>'
+      +'<div style="font-size:13px;font-weight:700;color:'+trainDef.color+'">'+trainDef.name+'</div></div>';
+  } else {
+    h+='<div style="cursor:pointer" onclick="openTrainLogModal(\''+ds+'\')">'
+      +'<div style="font-size:13px;color:#007AFF;font-weight:600;text-align:center;padding:4px">+ Registrar entrenamiento</div></div>';
+  }
+  h+='</div>';
   h+='<div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Movilidad</div>'
     +'<div onclick="toggleCalMob(\''+ds+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(mob?'rgba(52,199,89,0.08)':'rgba(0,0,0,0.03)')+';cursor:pointer;border:1px solid '+(mob?'rgba(52,199,89,0.3)':'rgba(0,0,0,0.06)')+'">'
     +'<div style="width:10px;height:10px;border-radius:50%;background:#34C759"></div>'
@@ -1224,6 +1267,20 @@ function calDay(ds){
   }
   sH(h);
 }
+function openTrainLogModal(ds){
+  document.getElementById('modal-title').textContent='Registrar entrenamiento';
+  let html='';
+  Object.keys(SESSDEF).forEach(function(sk){
+    const sm=SESSDEF[sk];
+    html+='<div class="opt-row" onclick="setCalTrain(\''+ds+'\',\''+sk+'\')">'
+      +'<div class="opt-dot" style="background:'+sm.color+'"></div>'
+      +'<div style="flex:1"><div style="font-size:13px">'+sm.name+'</div></div></div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function setCalTrain(ds,sk){sv('completed_'+ds,sk);closeModal();calDay(ds);showCel('✅','Entrenamiento registrado');}
+function deleteCalTrain(ds){localStorage.removeItem('completed_'+ds);calDay(ds);showCel('🗑','Entrenamiento eliminado');}
 function deleteCalSport(ds){localStorage.removeItem('sport_'+ds);calDay(ds);showCel('🗑','Deporte eliminado');}
  function toggleCalMob(ds){const k='mob_completed_'+ds;if(gl(k))localStorage.removeItem(k);else sv(k,'1');calDay(ds);}
 function openSportModal(targetDs){
@@ -1250,7 +1307,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.4.0</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.5.0</div>';
   return h;
 }
 
@@ -1318,7 +1375,7 @@ function goBack(){
   go('hoy');
 }
 
-init();
+try{init();}catch(e){document.getElementById('cnt').innerHTML='<div style="text-align:center;padding:40px 16px"><div style="font-size:44px;margin-bottom:14px">⚠️</div><div style="font-size:16px;font-weight:800;margin-bottom:8px">No se pudo iniciar la app</div><div style="font-size:12px;color:#999;background:rgba(0,0,0,0.04);border-radius:10px;padding:10px;text-align:left;margin-bottom:16px;font-family:monospace;word-break:break-word">'+String(e.message||e)+'</div><button class="btn btn-blue" onclick="location.reload()">Recargar app</button></div>';}
 </script>
 </body>
 </html>
