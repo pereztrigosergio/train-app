@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.5.2">
+<meta name="app-version" content="3.9.1">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -67,6 +67,7 @@ body{height:100%;font-family:-apple-system,BlinkMacSystemFont,sans-serif;backgro
 #timerov{position:fixed;inset:0;z-index:300;display:none;background:#111;color:#fff;flex-direction:column}
 #timerov.show{display:flex}
 @keyframes pulseWork{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes flashBg{0%{filter:brightness(2.4)}100%{filter:brightness(1)}}
 #modal-inner{background:#fff;border-radius:20px;width:100%;max-width:400px;padding:0 0 16px;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:modalPopIn .28s cubic-bezier(0.34,1.56,0.64,1) both}
 @keyframes modalPopIn{0%{opacity:0;transform:scale(.9)}100%{opacity:1;transform:scale(1)}}
 .opt-row{display:flex;align-items:center;gap:12px;padding:13px 16px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,0.06)}
@@ -164,10 +165,10 @@ const MOB_EXTRA={
 function todayIdx(){return today.getDay()===0?6:today.getDay()-1;}
 const SESSDEF={
   tf:{name:'Torso Fuerza',color:'#007AFF',bg:'rgba(0,122,255,0.07)'},
-  pf:{name:'Pierna Fuerza',color:'#FF6B35',bg:'rgba(255,107,53,0.07)'},
-  mc:{name:'Movimiento + Core',color:'#3A3A3A',bg:'rgba(58,58,58,0.07)'},
+  pf:{name:'Pierna Fuerza',color:'#FF9500',bg:'rgba(255,149,0,0.07)'},
+  mc:{name:'Movimiento + Core',color:'#5856D6',bg:'rgba(88,86,214,0.07)'},
   ta:{name:'Torso Atlético',color:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
-  pa:{name:'Pierna Atlético',color:'#FF9F0A',bg:'rgba(255,159,10,0.07)'},
+  pa:{name:'Pierna Atlético',color:'#30B0C7',bg:'rgba(48,176,199,0.07)'},
 };
 const DEFAULT_SCHED=['tf','pf','mc','ta','pa',null,null];
 
@@ -182,12 +183,11 @@ const EXLIB={
     {id:'th1',n:'Remo TRX',mat:'TRX',reps:'8-15',v:['Inclinación ligera','Inclinación media','Inclinación alta','Una pierna elevada','Remo unilateral asistido']},
     {id:'th2',n:'Remo unilateral con kettlebell',mat:'KB',reps:'8-15/lado',v:['12 kg','16 kg','Tempo lento','Pausa arriba']},
     {id:'th3',n:'Remo renegado',mat:'KB',reps:'6-10/lado',v:['Apoyo alto','Con kettlebell','Con pausa']},
-    {id:'th4',n:'Remo invertido adaptado',mat:'TRX',reps:'8-15',v:['Inclinación baja','Inclinación media','Inclinación alta']},
+    {id:'th4',n:'Remo invertido en paralelas',mat:'Paralelas',reps:'8-15',v:['Agarre neutro, pies apoyados altos','Agarre neutro, pies en el suelo','Agarre prono (palmas abajo)','Agarre supino (palmas arriba)','Agarre neutro, pies elevados en banco']},
   ]},
   ev:{name:'Empuje vertical',principal:true,ex:[
     {id:'ev1',n:'Pike push up',mat:'PC',reps:'6-12',v:['Pike elevada','Pike normal','Pike pies elevados','Progresión handstand']},
     {id:'ev2',n:'Press unilateral con kettlebell',mat:'KB',reps:'8-12/lado',v:['12 kg','16 kg','Tempo lento','Press con pausa']},
-    {id:'ev3',n:'Press con mancuerna',mat:'Mancuernas 7,5kg',reps:'10-15',v:['7,5 kg','Tempo lento','Unilateral']},
   ]},
   hc:{name:'Dominancia de cadera',principal:true,ex:[
     {id:'hc1',n:'RDL unilateral con kettlebell',mat:'KB',reps:'8-15/lado',v:['Sin carga','12 kg','16 kg','Tempo lento (3-1-1)','Pausa en máxima tensión','Déficit pequeño']},
@@ -206,9 +206,10 @@ const EXLIB={
     {id:'gm3',n:'Copenhagen plank',mat:'Banco',reps:'15-30s/lado',v:['Rodilla apoyada','Pierna extendida parcial','Pierna extendida completa']},
   ]},
   acc:{name:'Accesorio torso',principal:false,ex:[
-    {id:'acc1',n:'Curl bíceps',mat:'KB/banda',reps:'10-15',v:['Banda suave','Banda fuerte','KB 12kg','Tempo lento']},
-    {id:'acc2',n:'Extensión tríceps',mat:'Banda',reps:'10-15',v:['Banda suave','Banda fuerte','Unilateral','Tempo lento']},
+    {id:'acc1',n:'Curl bíceps',mat:'KB',reps:'10-15',v:['Bilateral 12kg','Bilateral 16kg','Unilateral 12kg','Unilateral 16kg']},
+    {id:'acc2',n:'Extensión tríceps',mat:'KB',reps:'10-15',v:['Bilateral sobre cabeza 12kg','Bilateral sobre cabeza 16kg','Unilateral 12kg','Unilateral 16kg']},
     {id:'acc3',n:'Face pull (deltoides posterior)',mat:'Banda',reps:'12-20',v:['Banda suave','Banda fuerte','Pausa','Tempo lento']},
+    {id:'acc4',n:'Elevación lateral',mat:'Banda',reps:'12-20',v:['Banda suave','Banda media','Banda fuerte','Banda fuerte + pausa arriba']},
   ]},
 };
 
@@ -281,9 +282,11 @@ const KB_COMPLEXES=[
   'Halo + goblet squat + press (5 rondas)',
   'Turkish get up parcial + desplazamiento (3 por lado)',
 ];
+
 const METAB_KB=['Swing','Clean','Clean + press','Snatch técnico','Goblet squat','Thruster','Halo','Farmer carry','Suitcase carry'];
 const METAB_BW=['Burpee','Flexión','Mountain climber','Bear crawl','Jump squat','Zancada dinámica','Skater','Plank shoulder taps','Crab walk'];
 const METAB_ROPE=['Saltos normales','Saltos rápidos','Doble salto','Alternos'];
+const METAB_CORE=['Plancha','Russian twist','Bicycle crunch','V-ups','Flutter kicks','Escalador lento (mountain climber controlado)','Toe touches','Plancha lateral con rotación'];
 
 function seedRand(str){
   let h=0;for(let i=0;i<str.length;i++){h=(h<<5)-h+str.charCodeAt(i);h|=0;}
@@ -297,13 +300,31 @@ function weekTag(){
   return wk+'_'+today.getFullYear();
 }
 function weekSeed(prefix){return seedRand(prefix+'_'+weekTag());}
+function getMetabOvr(sk){
+  const raw=gl('metab_ovr_'+sk+'_'+weekTag());
+  if(!raw)return{};
+  try{return JSON.parse(raw)||{};}catch(e){return{};}
+}
+function saveMetabOvr(sk,ovr,bumpSeed){
+  const key='metab_ovr_'+sk+'_'+weekTag();
+  if(bumpSeed)ovr.seed=(ovr.seed||0)+1;
+  sv(key,JSON.stringify(ovr));
+}
+function metabPool(ovr){
+  if(ovr.exercises&&ovr.exercises.length)return ovr.exercises.map(function(e){return {e:e};});
+  let src=METAB_KB.concat(METAB_BW).concat(METAB_ROPE).concat(METAB_CORE);
+  if(ovr.filter==='kb')src=METAB_KB;
+  else if(ovr.filter==='bw')src=METAB_BW;
+  else if(ovr.filter==='rope')src=METAB_ROPE;
+  else if(ovr.filter==='core')src=METAB_CORE;
+  return src.map(function(e){return {e:e};});
+}
 function genMetabolic(sk,intensity){
-  const ovrRaw=gl('metab_ovr_'+sk+'_'+weekTag());
-  let ovr=null;if(ovrRaw){try{ovr=JSON.parse(ovrRaw);}catch(e){}}
+  const ovr=getMetabOvr(sk);
   const express=isExpress();
-  const rnd=seedRand(sk+'_metab_'+weekTag()+'_'+(ovr?ovr.seed:0)+(express?'_ex':''));
-  const fmt=(ovr&&ovr.fmt)?ovr.fmt:pick(['EMOM','Tabata','Intervalos','AMRAP'],rnd);
-  const pool=[].concat(METAB_KB.map(e=>({e:e})),METAB_BW.map(e=>({e:e})),METAB_ROPE.map(e=>({e:e})));
+  const rnd=seedRand(sk+'_metab_'+weekTag()+'_'+(ovr.seed||0)+(express?'_ex':''));
+  const fmt=ovr.fmt||pick(['EMOM','Tabata','Intervalos','AMRAP'],rnd);
+  const pool=metabPool(ovr);
   if(fmt==='EMOM'){
     const durPool=express?(intensity==='short'?[6,7,8]:[8,9,10]):(intensity==='short'?[8,10,12]:[12,14,15]);
     const dur=pick(durPool,rnd);
@@ -311,7 +332,7 @@ function genMetabolic(sk,intensity){
     return {fmt:fmt,title:'EMOM '+dur,detail:moves.map(function(m,i){return 'Min '+(i+1)+': '+m.e;}).join(' · ')+(moves.length>1?' (repetir ciclo)':''),dur:dur+' min',raw:{durMin:dur,moves:moves.map(function(m){return m.e;})}};
   }
   if(fmt==='Tabata'){
-    const blockPool=express?[1,2]:(intensity==='short'?[2,3]:[3]);
+    const blockPool=express?[1,2]:(intensity==='short'?[2,2,3]:[3]);
     const blocks=pick(blockPool,rnd);
     const moves=pickN(pool,blocks,rnd);
     return {fmt:fmt,title:'Tabata ×'+blocks,detail:moves.map(function(m){return m.e;}).join(' → ')+' — 20s trabajo / 10s descanso, 4 min c/u',dur:(blocks*4)+' min',raw:{blocks:moves.map(function(m){return {move:m.e};})}};
@@ -330,30 +351,91 @@ function genMetabolic(sk,intensity){
   const moves=pickN(pool,3,rnd);
   return {fmt:fmt,title:'AMRAP '+dur+' min',detail:moves.map(function(m){return '8-10 '+m.e;}).join(' · '),dur:dur+' min',raw:{durMin:dur,moves:moves.map(function(m){return m.e;})}};
 }
+function shuffleMetab(sk){
+  const ovr=getMetabOvr(sk);
+  const seed=(ovr.seed||0)+1;
+  saveMetabOvr(sk,{seed:seed},false);
+  closeModal();
+  sH(rTab());
+}
 function setMetabFmt(sk,fmt){
-  const key='metab_ovr_'+sk+'_'+weekTag();
-  if(fmt==='auto'){localStorage.removeItem(key);}
-  else{
-    let seed=1;const prevRaw=gl(key);
-    if(prevRaw){try{seed=(JSON.parse(prevRaw).seed||0)+1;}catch(e){}}
-    sv(key,JSON.stringify({fmt:fmt,seed:seed}));
-  }
+  const ovr=getMetabOvr(sk);
+  if(fmt==='auto')delete ovr.fmt;else ovr.fmt=fmt;
+  saveMetabOvr(sk,ovr,true);
+  closeModal();sH(rTab());
+}
+function setMetabFilter(sk,filter){
+  const ovr=getMetabOvr(sk);
+  if(filter==='auto')delete ovr.filter;else ovr.filter=filter;
+  delete ovr.exercises;
+  saveMetabOvr(sk,ovr,true);
   closeModal();sH(rTab());
 }
 function openMetabPicker(sk){
   document.getElementById('modal-title').textContent='Cambiar metabólico';
-  const ovrRaw=gl('metab_ovr_'+sk+'_'+weekTag());let curFmt=null;
-  if(ovrRaw){try{curFmt=JSON.parse(ovrRaw).fmt;}catch(e){}}
-  let html='<div class="opt-row" onclick="setMetabFmt(\''+sk+'\',\'auto\')">'
-    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!curFmt?'700':'400')+';color:'+(!curFmt?'#007AFF':'#111')+'">🎲 Aleatorio (recomendado)</div></div>'+(!curFmt?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  const ovr=getMetabOvr(sk);
+  const curFmt=ovr.fmt||null;const curFilter=ovr.filter||null;
+  let html='<div class="opt-row" onclick="shuffleMetab(\''+sk+'\')" style="background:rgba(0,122,255,0.04)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#007AFF">🎲 Generar otro totalmente aleatorio</div>'
+    +'<div style="font-size:11px;color:#999;margin-top:1px">Quita formato, material y ejercicios fijados</div></div></div>';
+  html+='<div style="padding:12px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Formato</div>';
+  html+='<div class="opt-row" onclick="setMetabFmt(\''+sk+'\',\'auto\')">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!curFmt?'700':'400')+';color:'+(!curFmt?'#007AFF':'#111')+'">Aleatorio</div></div>'+(!curFmt?'<span style="color:#007AFF">✓</span>':'')+'</div>';
   ['EMOM','Tabata','Intervalos','AMRAP'].forEach(function(f){
     const isC=curFmt===f;
     html+='<div class="opt-row" onclick="setMetabFmt(\''+sk+'\',\''+f+'\')">'
       +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+f+'</div></div>'+(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
   });
-  html+='<div style="padding:10px 16px 2px;font-size:11px;color:#999">Volver a tocar un formato genera un entrenamiento aleatorio nuevo dentro de ese formato.</div>';
+  html+='<div style="padding:12px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Material</div>';
+  const filters=[['auto','🎲 Aleatorio (mixto)'],['kb','🏋️ Solo Kettlebell'],['bw','🤸 Solo peso corporal'],['rope','🪢 Solo comba'],['core','🔥 Solo Core/abdominales']];
+  filters.forEach(function(f){
+    const isC=(f[0]==='auto'&&!curFilter)||curFilter===f[0];
+    html+='<div class="opt-row" onclick="setMetabFilter(\''+sk+'\',\''+f[0]+'\')">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+f[1]+'</div></div>'+(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  });
+  html+='<div style="padding:14px 16px 4px">'
+    +'<button onclick="openMetabExercisePicker(\''+sk+'\')" style="width:100%;padding:11px;border-radius:10px;border:1px solid rgba(0,122,255,0.3);background:rgba(0,122,255,0.05);color:#007AFF;font-size:13px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif">🎯 Elegir ejercicios exactos'+(ovr.exercises&&ovr.exercises.length?' ('+ovr.exercises.length+')':'')+'</button></div>';
+  html+='<div style="padding:8px 16px 2px;font-size:11px;color:#999">Volver a tocar un formato o material genera un entrenamiento aleatorio nuevo.</div>';
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal').classList.add('show');
+}
+function openMetabExercisePicker(sk){
+  const ovr=getMetabOvr(sk);
+  const sel=ovr.exercises||[];
+  document.getElementById('modal-title').textContent='Ejercicios exactos';
+  let html='<div style="padding:8px 16px 10px;font-size:11px;color:#999">Marca los que quieras usar siempre en este metabólico. Sin ninguno marcado, vuelve a ser aleatorio.</div>';
+  html+='<div style="padding:6px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">🏋️ Kettlebell</div>';
+  METAB_KB.forEach(function(e){html+=metabExRow(sk,e,sel);});
+  html+='<div style="padding:10px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">🤸 Peso corporal</div>';
+  METAB_BW.forEach(function(e){html+=metabExRow(sk,e,sel);});
+  html+='<div style="padding:10px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">🪢 Comba</div>';
+  METAB_ROPE.forEach(function(e){html+=metabExRow(sk,e,sel);});
+  html+='<div style="padding:10px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">🔥 Core / abdominales</div>';
+  METAB_CORE.forEach(function(e){html+=metabExRow(sk,e,sel);});
+  html+='<div style="padding:14px 16px 4px;display:flex;gap:8px">'
+    +'<button onclick="clearMetabExercises(\''+sk+'\')" style="flex:1;padding:11px;border-radius:10px;border:1px solid rgba(0,0,0,0.1);background:#fff;color:#555;font-size:13px;font-weight:600;cursor:pointer;font-family:-apple-system,sans-serif">Quitar selección</button>'
+    +'<button onclick="closeModal();sH(rTab())" style="flex:1;padding:11px;border-radius:10px;border:none;background:#007AFF;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:-apple-system,sans-serif">Listo</button></div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function metabExRow(sk,e,sel){
+  const isC=sel.indexOf(e)>-1;
+  return '<div class="opt-row" onclick="toggleMetabExercise(\''+sk+'\',\''+e+'\')">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+e+'</div></div>'
+    +'<div style="width:20px;height:20px;border-radius:5px;border:2px solid '+(isC?'#007AFF':'rgba(0,0,0,0.15)')+';background:'+(isC?'#007AFF':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;flex-shrink:0">'+(isC?'✓':'')+'</div></div>';
+}
+function toggleMetabExercise(sk,e){
+  const ovr=getMetabOvr(sk);
+  if(!ovr.exercises)ovr.exercises=[];
+  const idx=ovr.exercises.indexOf(e);
+  if(idx>-1)ovr.exercises.splice(idx,1);else ovr.exercises.push(e);
+  saveMetabOvr(sk,ovr,true);
+  openMetabExercisePicker(sk);
+}
+function clearMetabExercises(sk){
+  const ovr=getMetabOvr(sk);delete ovr.exercises;
+  saveMetabOvr(sk,ovr,true);
+  closeModal();sH(rTab());
 }
 
 // ─── MODO EXPRÉS ───────────────────────────────────
@@ -367,23 +449,47 @@ function toggleExpress(){
 // ─── TEMPORIZADOR (Metabólico + Flow) ─────────────
 let TIMER=null;
 let audioCtx=null;
-function beep(freq,durMs){
+function unlockAudio(){
   try{
     if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==='suspended')audioCtx.resume();
-    const osc=audioCtx.createOscillator();const gain=audioCtx.createGain();
-    osc.type='square';osc.frequency.value=freq;
-    gain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.28,audioCtx.currentTime+0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+durMs/1000);
-    osc.connect(gain);gain.connect(audioCtx.destination);
-    osc.start();osc.stop(audioCtx.currentTime+durMs/1000+0.03);
+    const buf=audioCtx.createBuffer(1,1,22050);
+    const src=audioCtx.createBufferSource();
+    src.buffer=buf;src.connect(audioCtx.destination);src.start(0);
   }catch(e){}
 }
-function beepWork(){beep(1500,140);setTimeout(function(){beep(1500,140);},170);vib([80,60,80]);}
-function beepRest(){beep(750,180);vib(100);}
-function beepFinal(){beep(1700,130);setTimeout(function(){beep(1700,130);},160);setTimeout(function(){beep(1700,320);},320);vib([100,80,100,80,200]);}
+let wakeLock=null;
+function requestWake(){
+  try{
+    if('wakeLock' in navigator){
+      navigator.wakeLock.request('screen').then(function(wl){wakeLock=wl;}).catch(function(){});
+    }
+  }catch(e){}
+}
+function releaseWake(){try{if(wakeLock){wakeLock.release();wakeLock=null;}}catch(e){}}
+document.addEventListener('visibilitychange',function(){
+  if(TIMER&&document.visibilityState==='visible'){requestWake();unlockAudio();}
+});
+function beep(freq,durMs){
+  try{
+    unlockAudio();
+    [freq,freq*1.5].forEach(function(f){
+      const osc=audioCtx.createOscillator();const gain=audioCtx.createGain();
+      osc.type='square';osc.frequency.value=f;
+      gain.gain.setValueAtTime(0.0001,audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.4,audioCtx.currentTime+0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+durMs/1000);
+      osc.connect(gain);gain.connect(audioCtx.destination);
+      osc.start();osc.stop(audioCtx.currentTime+durMs/1000+0.03);
+    });
+  }catch(e){}
+}
+function beepWork(){beep(1500,150);setTimeout(function(){beep(1500,150);},180);vib([90,60,90]);}
+function beepRest(){beep(750,190);vib(110);}
+function beepFinal(){beep(1700,140);setTimeout(function(){beep(1700,140);},170);setTimeout(function(){beep(1700,340);},340);vib([110,80,110,80,220]);}
 function vib(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
+document.addEventListener('touchstart',unlockAudio,{once:true});
+document.addEventListener('click',unlockAudio,{once:true});
 
 function buildMetabPhases(mb){
   const phases=[{label:'Prepárate',dur:5,kind:'prep'}];
@@ -404,7 +510,12 @@ function buildMetabPhases(mb){
       phases.push({label:'Descanso',dur:mb.raw.scheme.rest,kind:'rest'});
     }
   } else if(mb.fmt==='AMRAP'){
-    phases.push({label:'AMRAP',sub:mb.raw.moves.join(' · '),dur:mb.raw.durMin*60,kind:'work'});
+    let remaining=mb.raw.durMin*60;let chunkIdx=0;
+    while(remaining>0){
+      const chunk=Math.min(60,remaining);
+      phases.push({label:'AMRAP',sub:mb.raw.moves.join(' · ')+' · min '+(chunkIdx+1),dur:chunk,kind:'work'});
+      remaining-=chunk;chunkIdx++;
+    }
   }
   return phases;
 }
@@ -426,7 +537,9 @@ function buildFlowPhases(){
 }
 function startTimer(phases,title,onDoneMsg){
   clearInterval(TIMER&&TIMER.interval);
-  TIMER={phases:phases,idx:0,remaining:phases[0].dur,running:true,interval:null,title:title,onDoneMsg:onDoneMsg||'¡Completado!'};
+  unlockAudio();
+  requestWake();
+  TIMER={phases:phases,idx:0,remaining:phases[0].dur,running:true,interval:null,title:title,onDoneMsg:onDoneMsg||'¡Completado!',flash:true};
   document.getElementById('timerov').classList.add('show');
   renderTimer();
   beepWork();
@@ -440,12 +553,14 @@ function tickTimer(){
     if(TIMER.idx>=TIMER.phases.length){finishTimer();return;}
     const ph=TIMER.phases[TIMER.idx];
     TIMER.remaining=ph.dur;
+    TIMER.flash=true;
     if(ph.kind==='work')beepWork();else if(ph.kind==='rest')beepRest();else beepRest();
   }
   renderTimer();
 }
 function finishTimer(){
   clearInterval(TIMER.interval);
+  releaseWake();
   beepFinal();
   const msg=TIMER.onDoneMsg;
   document.getElementById('timerov').innerHTML='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px">'
@@ -459,11 +574,13 @@ function skipPhase(){
   TIMER.idx++;
   if(TIMER.idx>=TIMER.phases.length){finishTimer();return;}
   const ph=TIMER.phases[TIMER.idx];TIMER.remaining=ph.dur;
+  TIMER.flash=true;
   if(ph.kind==='work')beepWork();else beepRest();
   renderTimer();
 }
 function closeTimer(){
   if(TIMER)clearInterval(TIMER.interval);
+  releaseWake();
   TIMER=null;
   document.getElementById('timerov').classList.remove('show');
 }
@@ -472,10 +589,11 @@ function renderTimer(){
   if(!TIMER)return;
   const ph=TIMER.phases[TIMER.idx];
   const next=TIMER.phases[TIMER.idx+1];
+  const doFlash=!!TIMER.flash;TIMER.flash=false;
   const bg=ph.kind==='work'?'#1a1a1a':(ph.kind==='prep'?'#1a1a1a':'#0a0a0a');
   const accent=ph.kind==='work'?'#34C759':(ph.kind==='prep'?'#FF9F0A':'#007AFF');
   const kindLabel=ph.kind==='work'?'TRABAJO':(ph.kind==='prep'?'PREPARADOS':'DESCANSO');
-  let h='<div style="background:'+bg+';flex:1;display:flex;flex-direction:column">';
+  let h='<div style="background:'+bg+';flex:1;display:flex;flex-direction:column;'+(doFlash?'animation:flashBg .4s ease':'')+'">';
   h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px">'
     +'<div style="font-size:12px;color:rgba(255,255,255,0.5);font-weight:600">'+TIMER.title+'</div>'
     +'<button onclick="closeTimer()" style="background:rgba(255,255,255,0.1);border:none;width:30px;height:30px;border-radius:50%;color:#fff;font-size:15px;cursor:pointer">✕</button></div>';
@@ -1313,7 +1431,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.5.2</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.9.1</div>';
   return h;
 }
 
