@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.9.1">
+<meta name="app-version" content="3.9.2">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1028,11 +1028,13 @@ function rHoy(){
   if(sk&&sk!=='mc'&&!TEMPLATES[sk])sk=null;
   let h='';
   const mobDone=MOB.filter(m=>ST.mdone.has(m.id)).length;
+  const mobAllDone=mobDone===MOB.length;
   h+='<div class="slbl">Movilidad</div>';
   h+='<div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;border-color:rgba(52,199,89,0.3)" onclick="go(\'mob\')">'
     +'<div style="width:36px;height:36px;border-radius:10px;background:rgba(52,199,89,0.08);display:flex;align-items:center;justify-content:center;font-size:18px">☀️</div>'
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Movilidad matutina</div>'
     +'<div style="font-size:11px;color:#999">'+mobDone+'/'+MOB.length+' completados</div></div>'
+    +'<div class="chk'+(mobAllDone?' ok':'')+'" onclick="event.stopPropagation();completeAllMob()" style="margin-top:0">✓</div>'
     +'<div style="font-size:18px;color:#999">›</div></div>';
 
   if(sk){
@@ -1121,7 +1123,7 @@ function completeAllMob(){
   // Also mark mob_completed for calendar dot
   if(MOB.every(m=>ST.mdone.has(m.id)))sv('mob_completed_'+tstr,'1');
   else localStorage.removeItem('mob_completed_'+tstr);
-  sH(rMob());
+  sH(rTab());
 }
 
 // ── RECOVERY ───────────────────────────────────────
@@ -1431,7 +1433,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.9.1</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.9.2</div>';
   return h;
 }
 
