@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.9.2">
+<meta name="app-version" content="3.10.1">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -644,7 +644,7 @@ function confirmDeleteLvlEntry(exId,idx){
 function resetExProgress(exId){
   document.getElementById('modal-title').textContent='Reiniciar ejercicio';
   let html='<div style="padding:14px 16px">'
-    +'<div style="font-size:13px;color:#444;margin-bottom:14px">Se borrará todo el historial de este ejercicio y volverá al nivel 1. No se puede deshacer.</div>'
+    +'<div style="font-size:13px;color:#444;margin-bottom:14px">Se borrará todo el historial (niveles y repeticiones) de este ejercicio y volverá al nivel 1. No se puede deshacer.</div>'
     +'<div style="display:flex;gap:8px">'
     +'<button class="btn" style="flex:1;margin:0" onclick="closeModal()">Cancelar</button>'
     +'<button class="btn btn-red" style="flex:1;margin:0" onclick="confirmResetExProgress(\''+exId+'\')">Reiniciar</button>'
@@ -655,6 +655,7 @@ function resetExProgress(exId){
 function confirmResetExProgress(exId){
   const hist=getLvlHistAll();delete hist[exId];sv('lvl_hist',JSON.stringify(hist));
   delete ST.lvl[exId];sv('lvl2',JSON.stringify(ST.lvl));
+  const rhist=getRepsHistAll();delete rhist[exId];sv('reps_hist',JSON.stringify(rhist));
   closeModal();sH(rProg());
 }
 function getRotatedExercises(sk,pat,count){
@@ -739,7 +740,17 @@ function markCompleted2(sk){
   const key='completed_'+tstr;
   if(gl(key)===sk){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
   else{
-    getSessionBlocks(sk).forEach(function(b){ST.done.add(sk+'_'+b.pat+'_'+b.slotIdx);});
+    const blocks=getSessionBlocks(sk);
+    const rhist=getRepsHistAll();
+    blocks.forEach(function(b){
+      ST.done.add(sk+'_'+b.pat+'_'+b.slotIdx);
+      const last=(rhist[b.ex.id]||[])[0];
+      if(last){
+        if(!rhist[b.ex.id])rhist[b.ex.id]=[];
+        rhist[b.ex.id].unshift({date:new Date().toISOString(),reps:last.reps});
+      }
+    });
+    sv('reps_hist',JSON.stringify(rhist));
     ST.done.add(sk+'_metab');
     sv('dn_'+tstr,JSON.stringify([...ST.done]));sv(key,sk);
     showCel('💪','¡Sesión completada!');
@@ -755,19 +766,88 @@ function markCompletedMC(){
 function renderExCard2(sk,b,sdata){
   const ex=b.ex;const lv=Math.min(getLv2(ex.id),ex.v.length-1);
   const doneId=sk+'_'+b.pat+'_'+b.slotIdx;const ok=ST.done.has(doneId);
+  const repsHist=getRepsHist(ex.id);const lastReps=repsHist[0]?repsHist[0].reps:null;
   return '<div class="exc'+(ok?' ok':'')+'">'
-    +'<div style="flex:1" onclick="tapEx2(\''+doneId+'\')">'
+    +'<div style="flex:1" onclick="tapExDone(\''+sk+'\',\''+b.pat+'\','+b.slotIdx+')">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
     +'<div class="xn'+(ok?' ok':'')+'">'+ex.n+' <span style="font-weight:400;color:#999;font-size:11px">— '+ex.v[lv]+'</span></div>'
     +'<div class="xr" style="color:'+sdata.color+'">'+b.sets+'×'+ex.reps+'</div></div>'
     +'<div style="margin-top:4px">'
     +'<span class="xt" style="background:'+sdata.bg+';color:'+sdata.color+'">'+EXLIB[b.pat].name+'</span>'
     +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
-    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">Nivel '+(lv+1)+'/'+ex.v.length+'</span></div>'
+    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">Nivel '+(lv+1)+'/'+ex.v.length+'</span>'
+    +(lastReps!==null?('<span class="xt" style="background:rgba(52,199,89,0.08);color:#1a7a38">Últ: '+lastReps+' reps</span>'):'')+'</div>'
     +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+b.rest+' descanso · RIR '+b.rir+'</div>'
     +'</div>'
     +'<button onclick="event.stopPropagation();openExPicker(\''+sk+'\',\''+b.pat+'\','+b.slotIdx+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
-    +'<div class="chk'+(ok?' ok':'')+'" onclick="tapEx2(\''+doneId+'\')">✓</div></div>';
+    +'<div class="chk'+(ok?' ok':'')+'" onclick="tapExDone(\''+sk+'\',\''+b.pat+'\','+b.slotIdx+')">✓</div></div>';
+}
+function getRepsHistAll(){try{return JSON.parse(gl('reps_hist')||'{}');}catch(e){return {};}}
+function getRepsHist(id){return getRepsHistAll()[id]||[];}
+function repsRangeMax(repsStr){
+  const nums=(repsStr.match(/\d+/g)||[]).map(Number);
+  return nums.length?Math.max.apply(null,nums):null;
+}
+function tapExDone(sk,pat,slotIdx){
+  const doneId=sk+'_'+pat+'_'+slotIdx;
+  if(ST.done.has(doneId)){
+    ST.done.delete(doneId);
+    sv('dn_'+tstr,JSON.stringify([...ST.done]));
+    checkAutoComplete();
+    sH(rTab());
+    return;
+  }
+  openRepsModal(sk,pat,slotIdx);
+}
+function openRepsModal(sk,pat,slotIdx){
+  const blkDef=TEMPLATES[sk].blocks.find(function(x){return x.pat===pat;});
+  const rotated=getRotatedExercises(sk,pat,blkDef.count);
+  const ex=getExFor(sk,pat,slotIdx,rotated[slotIdx]);
+  const hist=getRepsHist(ex.id);const last=hist[0];
+  document.getElementById('modal-title').textContent=ex.n;
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:12px;color:#999;margin-bottom:10px">Reps de la serie más dura'+(last?(' · última vez: '+last.reps):'')+'</div>'
+    +'<input type="number" inputmode="numeric" id="repsInput" value="'+(last?last.reps:'')+'" placeholder="reps" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);font-size:20px;font-weight:700;text-align:center;font-family:-apple-system,sans-serif;margin-bottom:12px">'
+    +'<button class="btn btn-blue" style="margin:0" onclick="confirmRepsAndDone(\''+sk+'\',\''+pat+'\','+slotIdx+')">Guardar y marcar hecho</button>'
+    +'</div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmRepsAndDone(sk,pat,slotIdx){
+  const el=document.getElementById('repsInput');
+  const val=parseInt(el.value,10);
+  if(!isNaN(val)&&val>0){
+    const blkDef=TEMPLATES[sk].blocks.find(function(x){return x.pat===pat;});
+    const rotated=getRotatedExercises(sk,pat,blkDef.count);
+    const ex=getExFor(sk,pat,slotIdx,rotated[slotIdx]);
+    const hist=getRepsHistAll();if(!hist[ex.id])hist[ex.id]=[];
+    hist[ex.id].unshift({date:new Date().toISOString(),reps:val});
+    sv('reps_hist',JSON.stringify(hist));
+  }
+  const doneId=sk+'_'+pat+'_'+slotIdx;
+  ST.done.add(doneId);
+  sv('dn_'+tstr,JSON.stringify([...ST.done]));
+  closeModal();
+  checkAutoComplete();
+  sH(rTab());
+}
+function deleteRepsEntry(exId,idx){
+  const hist=getRepsHistAll();const entry=(hist[exId]||[])[idx];if(!entry)return;
+  document.getElementById('modal-title').textContent='Eliminar registro';
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:13px;color:#444;margin-bottom:14px">¿Eliminar el registro de '+entry.reps+' reps del '+fmtMedDate(entry.date)+'? No se puede deshacer.</div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button class="btn" style="flex:1;margin:0" onclick="closeModal()">Cancelar</button>'
+    +'<button class="btn btn-red" style="flex:1;margin:0" onclick="confirmDeleteRepsEntry(\''+exId+'\','+idx+')">Eliminar</button>'
+    +'</div></div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmDeleteRepsEntry(exId,idx){
+  const hist=getRepsHistAll();const arr=hist[exId]||[];
+  arr.splice(idx,1);hist[exId]=arr;
+  sv('reps_hist',JSON.stringify(hist));
+  closeModal();sH(rProg());
 }
 function runMetabTimer(sk,intensity){
   const mb=genMetabolic(sk,intensity);
@@ -912,6 +992,10 @@ function toggleProg2(key){ST.progOpen[key]=!ST.progOpen[key];sH(rProg());}
 function renderProgItem2(ex,principal){
   const lv=Math.min(getLv2(ex.id),ex.v.length-1);const rir=principal?'1-2':'1-3';
   const hist=getLvlHist(ex.id);const isOpen=!!ST.progOpen['lvl_'+ex.id];
+  const repsHist=getRepsHist(ex.id);const repsOpen=!!ST.progOpen['reps_'+ex.id];
+  const ceilMax=repsRangeMax(ex.reps);
+  const recentTwo=repsHist.slice(0,2);
+  const atCeiling=ceilMax&&recentTwo.length===2&&recentTwo.every(function(r){return r.reps>=ceilMax;});
   let h='<div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(0,0,0,0.06)">'
     +'<div style="font-size:13px;font-weight:700;margin-bottom:6px">'+ex.n+'</div>'
     +'<div style="display:flex;gap:4px;margin-bottom:8px">';
@@ -919,10 +1003,26 @@ function renderProgItem2(ex,principal){
   h+='</div>';
   h+='<div style="font-size:13px;font-weight:700;color:#007AFF;margin-bottom:3px">▸ '+ex.v[lv]+' <span style="font-weight:400;color:#999;font-size:11px">Nivel '+(lv+1)+'/'+ex.v.length+'</span></div>';
   h+='<div style="font-size:11px;color:#999;margin-bottom:8px">Objetivo: '+ex.reps+' · RIR '+rir+'</div>';
+  if(atCeiling){
+    h+='<div style="font-size:11px;font-weight:700;color:#FF9500;background:rgba(255,149,0,0.08);border-radius:8px;padding:7px 10px;margin-bottom:8px">✨ Has tocado el techo ('+ceilMax+') dos veces seguidas — quizá toca subir nivel, añadir peso o cambiar el tempo</div>';
+  }
   h+='<div style="display:flex;gap:6px;margin-bottom:8px">';
   if(lv>0)h+='<button onclick="setExLevel(\''+ex.id+'\','+(lv-1)+','+(ex.v.length-1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid rgba(0,0,0,0.1);background:#fff;font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">← Bajar</button>';
   if(lv<ex.v.length-1)h+='<button onclick="setExLevel(\''+ex.id+'\','+(lv+1)+','+(ex.v.length-1)+')" style="flex:1;padding:7px;border-radius:8px;border:1px solid #007AFF;background:rgba(0,0,0,0.01);color:#007AFF;font-size:11px;cursor:pointer;font-family:-apple-system,sans-serif">Subir →</button>';
   h+='</div>';
+  h+='<div onclick="toggleProg2(\'reps_'+ex.id+'\')" style="font-size:11px;color:#999;cursor:pointer;text-align:center;padding:4px 0">'+(repsOpen?'Ocultar repeticiones ∧':'Ver repeticiones ('+repsHist.length+') ∨')+'</div>';
+  if(repsOpen){
+    h+='<div style="margin-top:4px;margin-bottom:6px">';
+    if(repsHist.length){
+      repsHist.forEach(function(r,i){h+='<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,0.04);color:#666">'
+        +'<span>'+fmtMedDate(r.date)+'</span>'
+        +'<span style="display:flex;align-items:center;gap:6px"><span style="font-weight:600">'+r.reps+' reps</span>'
+        +'<button onclick="deleteRepsEntry(\''+ex.id+'\','+i+')" style="background:none;border:none;color:#FF3B30;font-size:12px;cursor:pointer;padding:2px">🗑</button></span></div>';});
+    } else {
+      h+='<div style="font-size:11px;color:#bbb;text-align:center;padding:6px 0">Aún no hay registros de este ejercicio concreto. Se guardan al marcarlo como hecho en Hoy.</div>';
+    }
+    h+='</div>';
+  }
   if(hist.length){
     h+='<div onclick="toggleProg2(\'lvl_'+ex.id+'\')" style="font-size:11px;color:#999;cursor:pointer;text-align:center;padding:4px 0">'+(isOpen?'Ocultar evolución ∧':'Ver evolución ('+hist.length+') ∨')+'</div>';
     if(isOpen){
@@ -1433,7 +1533,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.9.2</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.10.1</div>';
   return h;
 }
 
