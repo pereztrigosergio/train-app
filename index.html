@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="3.10.1">
+<meta name="app-version" content="4.1.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -229,59 +229,158 @@ const CORE_COMP=[
   {id:'cc1',n:'Dead bug'},{id:'cc2',n:'Pallof press'},
   {id:'cc3',n:'Carry unilateral con kettlebell'},{id:'cc4',n:'Plancha frontal'},
 ];
-const FLOW_MOVES=[
-  {id:'fm1',n:'Bear crawl adelante',d:'Manos y pies en el suelo, rodillas casi sin tocar. Avanza coordinando mano y pie contrarios.'},
-  {id:'fm2',n:'Bear crawl atrás',d:'Igual que el bear crawl pero retrocediendo, controlando el equilibrio.'},
-  {id:'fm3',n:'Bear crawl lateral',d:'Desplázate hacia un lado manteniendo la cadera baja y el core activado.'},
-  {id:'fm4',n:'Beast to crab',d:'Desde posición de oso, gira la cadera y pasa a posición de cangrejo. Alterna varias veces.'},
-  {id:'fm5',n:'Kick throughs',d:'Desde plancha alta, pasa una pierna por debajo del cuerpo hacia el lado contrario.'},
-  {id:'fm6',n:'Shin box flow dinámico',d:'Sentado, rota entre las dos posiciones de "caja de espinilla" sin apoyar las manos.'},
-  {id:'fm7',n:'Cossack flow',d:'Sentadilla lateral profunda, trasladando el peso de una pierna a otra con la contraria estirada.'},
-  {id:'fm8',n:'Ape movement',d:'Salto lateral en cuclillas apoyando las manos, aterrizando bajo y controlado.'},
-  {id:'fm9',n:'Transición suelo-de pie',d:'Desde tumbado, levántate hasta quedar de pie sin usar las manos.'},
-  {id:'fm10',n:'Flexión + rotación + toque de pie',d:'Haz una flexión y al subir rota el tronco tocando el pie contrario con la mano.'},
-  {id:'fm11',n:'Burpee controlado',d:'Baja a plancha, flexión opcional, sube a salto sin prisa. Prioriza la técnica, no la velocidad.'},
-  {id:'fm12',n:'Turkish get up simplificado',d:'Tumbado con un brazo extendido hacia arriba, incorpórate por fases hasta quedar de pie.'},
+// ─── ZONA POSTURA (independiente del entrenamiento) ─
+const POSTURA=[
+  {id:'zp1',n:'Extensión torácica',reps:'6-8',desc:'Túmbate boca arriba sobre un rulo/toalla enrollada o el borde de un banco, justo a la altura de la mitad de la espalda (no en la zona lumbar). Manos detrás de la cabeza o cruzadas en el pecho. Deja caer la cabeza y los hombros hacia atrás por encima del apoyo, arqueando solo la parte alta/media de la espalda — la zona lumbar y el abdomen se quedan quietos, sin arquearse. Sube y vuelve a bajar despacio. Si notas que arqueas la zona baja de la espalda en vez de la alta, aprieta un poco el abdomen para bloquearla.'},
+  {id:'zp2',n:'Wall Slide',reps:'10-15',desc:'Brazos apoyados en la pared, sube y baja controlando la escápula. Lento, sin forzar los brazos contra la pared.'},
+  {id:'zp4',n:'Rotación externa con banda',reps:'12-20/lado',desc:'Banda ligera, codo pegado al cuerpo. Movimiento lento y controlado, sin cargas altas ni llegar al fallo.'},
+  {id:'zp5',n:'Chin Tuck / Retracción cervical',reps:'8-10 · mantener 3-5s',desc:'Pequeña retracción horizontal de la cabeza (como hacer "papada"). No lleves la barbilla al pecho. Suave, sin tensión.'},
+  {id:'zp6',n:'Apertura de pectoral',reps:'20-30s/lado',desc:'Estiramiento suave, por ejemplo en un marco de puerta. Sin buscar dolor ni sensación intensa.'},
 ];
-function getRotatedFlow(count){
-  const rnd=weekSeed('mc_flow');
-  const chosen=pickN(FLOW_MOVES,Math.min(count,FLOW_MOVES.length),rnd);
-  while(chosen.length<count)chosen.push(FLOW_MOVES[chosen.length%FLOW_MOVES.length]);
-  return chosen;
+// ─── FLOW: biblioteca por familias de movimiento ──
+const FLOW_LIB={
+  bear:{n:'Bear',cat:'loco',desc:'Apoyo en manos y pies, rodillas separadas del suelo unos 5cm, espalda plana. Mueve mano y pie contrarios a la vez.',variants:['Bear hold','Bear crawl adelante','Bear crawl atrás','Bear crawl lateral','Bear crawl diagonal','Bear con cambio de dirección'],compat:['kickthrough','crab','ape','squat','floorstand','pogo','bearjump']},
+  crab:{n:'Crab',cat:'loco',desc:'Apoyo en manos y pies con el pecho mirando arriba y la cadera elevada. Desplázate sin que la cadera toque el suelo.',variants:['Crab adelante','Crab atrás','Crab lateral'],compat:['bear','kickthrough']},
+  ape:{n:'Ape',cat:'loco',desc:'Cuclillas profundas apoyando las manos delante en el suelo. Desplázate lateral o en diagonal con la espalda recta.',variants:['Ape lateral','Ape diagonal','Ape con salto'],compat:['bear','squat','duckwalk','floorstand']},
+  leopard:{n:'Leopard crawl',cat:'loco',desc:'Reptar muy pegado al suelo, codos y rodillas casi rozando, coordinando brazo y pierna contrarios.',variants:['Leopard crawl'],compat:['bear','ape']},
+  duckwalk:{n:'Duck walk',cat:'loco',desc:'Mantén una sentadilla muy profunda mientras caminas hacia delante, sin subir la cadera.',variants:['Duck walk'],compat:['ape','cossack','squat']},
+  kickthrough:{n:'Kick-through',cat:'trans',desc:'Desde Bear, pasa una pierna por debajo del cuerpo rotando el tronco hacia el lado contrario.',variants:['Kick-through','Sit-through'],compat:['bear','crab','ape']},
+  shinbox:{n:'Shin box',cat:'trans',desc:'Sentado con una pierna doblada delante y otra detrás (90/90). Rota de un lado a otro sin apoyar las manos.',variants:['Shin box transition','Shin box → stand'],compat:['cossack','floorstand','bear']},
+  cossack:{n:'Cossack',cat:'trans',desc:'Sentadilla lateral profunda, llevando el peso a una pierna con la otra extendida al lado.',variants:['Cossack squat lateral','Cossack → floor'],compat:['shinbox','duckwalk','squat','floorstand']},
+  floorstand:{n:'Floor → stand',cat:'trans',desc:'Desde el suelo, levántate hasta quedar de pie usando manos y piernas coordinadas, sin apoyarte en nada más.',variants:['Technical stand-up','Floor → stand asistido'],compat:['bear','ape','shinbox','cossack','squat']},
+  squat:{n:'Squat integrado',cat:'light',desc:'Sentadilla completa dentro de la secuencia; puedes añadir un alcance con los brazos al bajar.',variants:['Squat integrado','Squat + reach'],compat:['bear','ape','duckwalk','floorstand','cossack','pushup','squatjump']},
+  pushup:{n:'Flexión integrada',cat:'light',desc:'Flexión completa dentro de la secuencia; puedes añadir rotación de tronco al subir.',variants:['Flexión integrada','Flexión + rotación'],compat:['bear','squat']},
+  skater:{n:'Skater',cat:'athletic',desc:'Salto lateral de una pierna a otra, aterrizando con control antes de saltar de nuevo.',variants:['Skater'],compat:['lateralbound','pogo','squat']},
+  lateralbound:{n:'Lateral bound',cat:'athletic',desc:'Salto lateral más amplio y explosivo que el skater; aterriza siempre con control.',variants:['Lateral bound'],compat:['skater','pogo']},
+  pogo:{n:'Pogo jump',cat:'athletic',desc:'Saltos pequeños y rápidos usando sobre todo el tobillo, con la rodilla casi sin doblar.',variants:['Pogo jump','Lateral pogo'],compat:['skater','lateralbound','bear']},
+  squatjump:{n:'Squat jump',cat:'athletic',desc:'Sentadilla y salto vertical explosivo; aterriza suave doblando las rodillas.',variants:['Squat jump'],compat:['squat','splitjump']},
+  splitjump:{n:'Split jump',cat:'athletic',desc:'Salto alternando la pierna adelantada en el aire, como una zancada saltada.',variants:['Split jump','Rotational jump'],compat:['squatjump']},
+  bearjump:{n:'Bear → jump',cat:'athletic',desc:'Desde posición de Bear, impulsa con fuerza hacia un salto adelante o arriba.',variants:['Bear → jump'],compat:['bear']},
+};
+const KB_MOVE_TYPES={
+  hinge:['Peso muerto','Swing'],pull:['Remo'],squatkb:['Sentadilla goblet'],
+  lunge:['Zancada inversa','Zancada lateral'],press:['Press','Push press'],
+  clean:['Clean'],rotational:['Halo'],
+};
+const KB_TEMPLATES=[['clean','lunge','press'],['hinge','squatkb','press'],['hinge','pull','clean'],['rotational','squatkb','press'],['clean','squatkb','press'],['hinge','press']];
+function genKBComplex(rnd){
+  const tmpl=pick(KB_TEMPLATES,rnd);
+  return tmpl.map(function(t){return pick(KB_MOVE_TYPES[t],rnd);}).join(' → ')+' (12kg)';
 }
-function getFlowFor(slotIdx,fallback){
-  const saved=gl('flowsel_'+slotIdx);
-  if(!saved)return fallback;
-  return FLOW_MOVES.find(function(m){return m.id===saved;})||fallback;
+function genChain(rnd,len,excludeCat){
+  const pool=Object.keys(FLOW_LIB).filter(function(id){return !excludeCat||excludeCat.indexOf(FLOW_LIB[id].cat)===-1;});
+  const startPool=pool.filter(function(id){return FLOW_LIB[id].cat!=='athletic';});
+  const chain=[pick(startPool.length?startPool:pool,rnd)];
+  let tries=0;
+  while(chain.length<len&&tries<15){
+    tries++;
+    const cur=FLOW_LIB[chain[chain.length-1]];
+    const cands=(cur.compat||[]).filter(function(id){return chain.indexOf(id)===-1&&pool.indexOf(id)>-1;});
+    if(!cands.length)break;
+    chain.push(pick(cands,rnd));
+  }
+  return chain;
 }
-function setFlowFor(slotIdx,moveId){
-  if(moveId)sv('flowsel_'+slotIdx,moveId);
-  else localStorage.removeItem('flowsel_'+slotIdx);
+function getFlowHist(){try{return JSON.parse(gl('flow_hist')||'[]');}catch(e){return [];}}
+function ensureFlowHistToday(sig){
+  const hist=getFlowHist();
+  if(hist.length&&hist[0].date===tstr)return;
+  hist.unshift({date:tstr,sig:sig});
+  sv('flow_hist',JSON.stringify(hist.slice(0,5)));
+}
+function genChainLocal(rnd,len,excludeCat,localAvoid,pastAvoid){
+  let chain,tries=0;
+  do{chain=genChain(rnd,len,excludeCat);tries++;}
+  while(((localAvoid&&localAvoid.indexOf(chain.join('-'))>-1)||(pastAvoid&&pastAvoid.indexOf(chain.join('-'))>-1))&&tries<8);
+  if(localAvoid)localAvoid.push(chain.join('-'));
+  return chain;
+}
+function chainToMoves(chain,rnd){return chain.map(function(id){return {fam:id,text:pick(FLOW_LIB[id].variants,rnd),desc:FLOW_LIB[id].desc};});}
+const FLOW_FMT_LABELS={continuo:'Flow continuo',bloques:'Flow por bloques',dinamico:'Flow + esfuerzo dinámico',kb:'Complejo KB',atletico:'Flow atlético',suelo:'Flow de suelo'};
+function genFlowSession(express){
+  const ovr=getFlowOvr();
+  const rnd=seedRand('flow_'+weekTag()+'_'+(ovr.seed||0)+(express?'_ex':''));
+  const fmt=ovr.fmt||pick(Object.keys(FLOW_FMT_LABELS),rnd);
+  const totalMin=express?12:pick([20,22,25],rnd);
+  const localAvoid=[];
+  const pastAvoid=getFlowHist().filter(function(h){return h.date!==tstr;}).map(function(h){return h.sig;});
+  let blocks=[];
+  if(fmt==='continuo'){
+    const nParts=express?1:2;const labels=['Parte 1','Parte 2'];
+    for(let i=0;i<nParts;i++){
+      const chain=genChainLocal(rnd,3,['athletic'],localAvoid,pastAvoid);
+      blocks.push({title:nParts>1?labels[i]:'Secuencia continua',moves:chainToMoves(chain,rnd),note:'repite en bucle ~'+Math.round(totalMin/nParts)+' min'});
+    }
+  } else if(fmt==='bloques'){
+    const nBlocks=express?2:3;const letters=['A','B','C'];
+    for(let i=0;i<nBlocks;i++){
+      const chain=genChainLocal(rnd,pick([3,3,4],rnd),['athletic'],localAvoid,pastAvoid);
+      blocks.push({title:'Bloque '+letters[i],moves:chainToMoves(chain,rnd),note:'~'+Math.round(totalMin/nBlocks)+' min'});
+    }
+  } else if(fmt==='dinamico'){
+    const chain1=genChainLocal(rnd,3,['athletic'],localAvoid,pastAvoid);
+    const athFam=pick(['skater','lateralbound','pogo','squatjump','splitjump'],rnd);
+    const chain2=genChainLocal(rnd,3,['athletic'],localAvoid,pastAvoid);
+    blocks=[
+      {title:'Flow',moves:chainToMoves(chain1,rnd)},
+      {title:'Esfuerzo dinámico',moves:[{fam:athFam,text:pick(FLOW_LIB[athFam].variants,rnd),desc:FLOW_LIB[athFam].desc}],note:'6-8 reps controladas, no es HIIT'},
+      {title:'Flow',moves:chainToMoves(chain2,rnd)},
+    ];
+  } else if(fmt==='kb'){
+    const n=express?1:2;
+    for(let i=0;i<n;i++)blocks.push({title:'Complejo KB '+(i+1),moves:[{fam:'kb',text:genKBComplex(rnd),desc:'Encadena los movimientos con fluidez, técnica antes que velocidad.'}],note:'12kg · técnica antes que velocidad'});
+    if(!express){const chain=genChainLocal(rnd,3,['athletic'],localAvoid,pastAvoid);blocks.push({title:'Movimiento de suelo',moves:chainToMoves(chain,rnd)});}
+  } else if(fmt==='atletico'){
+    const nBlocks=express?1:2;const letters=['A','B'];
+    for(let i=0;i<nBlocks;i++){
+      let chain=genChainLocal(rnd,3,null,localAvoid,pastAvoid);
+      if(!chain.some(function(id){return FLOW_LIB[id].cat==='athletic';}))chain=genChainLocal(rnd,3,null,localAvoid,pastAvoid);
+      blocks.push({title:nBlocks>1?'Bloque '+letters[i]:'Flow atlético',moves:chainToMoves(chain,rnd),note:'con moderación — aterrizajes controlados'});
+    }
+  } else {
+    const nParts=express?1:2;const labels=['Parte 1','Parte 2'];
+    for(let i=0;i<nParts;i++){
+      const chain=genChainLocal(rnd,3,['athletic','light'],localAvoid,pastAvoid);
+      blocks.push({title:nParts>1?labels[i]:'Flow de suelo',moves:chainToMoves(chain,rnd),note:'locomoción y transiciones'});
+    }
+  }
+  ensureFlowHistToday(fmt+'|'+localAvoid.join(';'));
+  return {fmt:fmt,totalMin:totalMin,blocks:blocks};
+}
+function getFlowRequiredIds(session){
+  const ids=[];
+  session.blocks.forEach(function(b,bi){b.moves.forEach(function(m,mi){ids.push('mc_'+bi+'_'+mi);});});
+  return ids;
+}
+function getFlowOvr(){const raw=gl('flow_ovr_'+weekTag());if(!raw)return{};try{return JSON.parse(raw)||{};}catch(e){return{};}}
+function saveFlowOvr(ovr){sv('flow_ovr_'+weekTag(),JSON.stringify(ovr));}
+function setFlowFmt(fmt){
+  const ovr=getFlowOvr();
+  if(fmt==='auto')delete ovr.fmt;else ovr.fmt=fmt;
+  ovr.seed=(ovr.seed||0)+1;
+  saveFlowOvr(ovr);
   closeModal();sH(rTab());
 }
-function openFlowPicker(slotIdx){
-  const rotated=getRotatedFlow(5);
-  const saved=gl('flowsel_'+slotIdx);
-  document.getElementById('modal-title').textContent='Cambiar movimiento Flow';
-  let html='<div class="opt-row" onclick="setFlowFor('+slotIdx+',null)">'
-    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!saved?'700':'400')+';color:'+(!saved?'#007AFF':'#111')+'">🔀 Auto (rota cada semana)</div>'
-    +'<div style="font-size:11px;color:#999">Ahora mismo: '+rotated[slotIdx].n+'</div></div>'+(!saved?'<span style="color:#007AFF">✓</span>':'')+'</div>';
-  FLOW_MOVES.forEach(function(m){
-    const isC=saved===m.id;
-    html+='<div class="opt-row" onclick="setFlowFor('+slotIdx+',\''+m.id+'\')">'
-      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+m.n+'</div></div>'
-      +(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+function shuffleFlow(){
+  const ovr=getFlowOvr();
+  saveFlowOvr({seed:(ovr.seed||0)+1});
+  closeModal();sH(rTab());
+}
+function openFlowPicker(){
+  document.getElementById('modal-title').textContent='Cambiar Flow';
+  const ovr=getFlowOvr();const curFmt=ovr.fmt||null;
+  let html='<div class="opt-row" onclick="shuffleFlow()" style="background:rgba(0,122,255,0.04)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:#007AFF">🎲 Generar otro totalmente aleatorio</div></div></div>';
+  html+='<div style="padding:12px 16px 2px;font-size:10px;font-weight:700;color:#999;text-transform:uppercase">Formato</div>';
+  html+='<div class="opt-row" onclick="setFlowFmt(\'auto\')"><div style="flex:1"><div style="font-size:13px;font-weight:'+(!curFmt?'700':'400')+';color:'+(!curFmt?'#007AFF':'#111')+'">Aleatorio</div></div>'+(!curFmt?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  Object.keys(FLOW_FMT_LABELS).forEach(function(f){
+    const isC=curFmt===f;
+    html+='<div class="opt-row" onclick="setFlowFmt(\''+f+'\')"><div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+FLOW_FMT_LABELS[f]+'</div></div>'+(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
   });
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal').classList.add('show');
 }
-const KB_COMPLEXES=[
-  '5 swings + 5 clean derecha + 5 clean izquierda + 5 press derecha + 5 press izquierda',
-  '5 deadlift + 5 remo derecha + 5 remo izquierda + 5 clean + 5 sentadilla frontal',
-  'Clean + press + reverse lunge (5 por lado)',
-  'Halo + goblet squat + press (5 rondas)',
-  'Turkish get up parcial + desplazamiento (3 por lado)',
-];
+
 
 const METAB_KB=['Swing','Clean','Clean + press','Snatch técnico','Goblet squat','Thruster','Halo','Farmer carry','Suitcase carry'];
 const METAB_BW=['Burpee','Flexión','Mountain climber','Bear crawl','Jump squat','Zancada dinámica','Skater','Plank shoulder taps','Crab walk'];
@@ -520,19 +619,18 @@ function buildMetabPhases(mb){
   return phases;
 }
 function buildFlowPhases(){
-  const express=isExpress();
-  const rounds=express?2:3;
-  const workSec=express?25:35;
-  const transSec=12;
-  const rotated=getRotatedFlow(5);
-  const moves=[];for(let i=0;i<5;i++)moves.push(getFlowFor(i,rotated[i]));
+  const session=genFlowSession(isExpress());
   const phases=[{label:'Prepárate',dur:5,kind:'prep'}];
-  for(let r=0;r<rounds;r++){
-    moves.forEach(function(m,i){
-      phases.push({label:m.n,sub:'Ronda '+(r+1)+'/'+rounds,dur:workSec,kind:'work'});
-      if(!(r===rounds-1&&i===moves.length-1))phases.push({label:'Transición',sub:'Siguiente: '+(moves[i+1]?moves[i+1].n:moves[0].n),dur:transSec,kind:'rest'});
+  const totalMoves=session.blocks.reduce(function(a,b){return a+b.moves.length;},0);
+  const perMoveSec=Math.max(20,Math.min(45,Math.round((session.totalMin*60)/Math.max(1,totalMoves))));
+  session.blocks.forEach(function(b,bi){
+    b.moves.forEach(function(m,mi){
+      const isKB=m.fam==='kb';
+      phases.push({label:m.text,sub:b.title,dur:isKB?75:perMoveSec,kind:'work'});
+      const isLastOverall=(bi===session.blocks.length-1&&mi===b.moves.length-1);
+      if(!isLastOverall)phases.push({label:'Transición',dur:12,kind:'rest'});
     });
-  }
+  });
   return phases;
 }
 function startTimer(phases,title,onDoneMsg){
@@ -718,11 +816,16 @@ function sessionsUsingPattern(pat){
   return out;
 }
 function checkAutoComplete(){
+  const pKey='completed_postura_'+tstr;
+  const pAllDone=POSTURA.every(function(ex){return ST.done.has(ex.id);});
+  if(pAllDone&&!gl(pKey)){sv(pKey,'1');showCel('🧍','¡Zona Postura completada!');}
+  else if(!pAllDone&&gl(pKey)){localStorage.removeItem(pKey);}
   const sk=ST.sched[todayIdx()];
   if(!sk)return;
   const key='completed_'+tstr;
   if(sk==='mc'){
-    const ids=['cm1','cm2','cm3','mc_flow_0','mc_flow_1','mc_flow_2','mc_flow_3','mc_flow_4'];
+    const session=genFlowSession(isExpress());
+    const ids=['cm1','cm2','cm3'].concat(getFlowRequiredIds(session));
     const allDone=ids.every(function(id){return ST.done.has(id);});
     if(allDone&&gl(key)!=='mc'){sv(key,'mc');showCel('🎉','¡Movimiento + Core completado!');}
     else if(!allDone&&gl(key)==='mc'){localStorage.removeItem(key);}
@@ -759,8 +862,14 @@ function markCompleted2(sk){
 }
 function markCompletedMC(){
   const key='completed_'+tstr;
-  if(gl(key)==='mc')localStorage.removeItem(key);
-  else{sv(key,'mc');showCel('💪','¡Sesión completada!');}
+  if(gl(key)==='mc'){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
+  else{
+    const session=genFlowSession(isExpress());
+    ['cm1','cm2','cm3'].concat(getFlowRequiredIds(session)).forEach(function(id){ST.done.add(id);});
+    sv('dn_'+tstr,JSON.stringify([...ST.done]));
+    sv(key,'mc');
+    showCel('💪','¡Sesión completada!');
+  }
   sH(rTab());
 }
 function renderExCard2(sk,b,sdata){
@@ -889,36 +998,30 @@ function rSessionCard(sk){
   return h;
 }
 function runFlowTimer(){
-  startTimer(buildFlowPhases(),'Flow / Movimiento atlético','¡Flow completado! 🌊');
+  startTimer(buildFlowPhases(),'Flow / Movimiento','¡Flow completado! 🌊');
 }
 function rMovCore(){
-  const rotatedFlow=getRotatedFlow(5);
-  const complex=pick(KB_COMPLEXES,weekSeed('mc_complex'));
-  const compExtra=pick(CORE_COMP,weekSeed('mc_core_extra'));
   const express=isExpress();
-  const roundsTxt=express?'2 rondas':'3-4 rondas';
-  const workTxt=express?'25s':'30-40s';
+  const session=genFlowSession(express);
+  const compExtra=pick(CORE_COMP,weekSeed('mc_core_extra'));
   let h='<div class="slbl">Movimiento + Core</div>';
-  h+='<div class="card" style="border-color:#3A3A3A"><div style="font-size:14px;font-weight:700;margin-bottom:4px">🌊 Flow / Movimiento atlético</div>'
-    +'<div style="font-size:11px;color:#999;line-height:1.6;margin-bottom:10px">'
-    +'<strong>¿Cómo funciona?</strong> Encadena los 5 movimientos de abajo uno tras otro, formando una ronda. Al terminar los 5, vuelve a empezar. Completa '+roundsTxt+', dedicando '+workTxt+' a cada movimiento y 10-15s de transición entre ellos. No busques intensidad, busca fluidez y control.</div>';
-  for(let i=0;i<5;i++){
-    const m=getFlowFor(i,rotatedFlow[i]);
-    const id='mc_flow_'+i;const ok=ST.done.has(id);
-    h+='<div class="exc'+(ok?' ok':'')+'" style="margin-bottom:6px">'
-      +'<div style="flex:1" onclick="tapEx2(\''+id+'\')"><div class="xn'+(ok?' ok':'')+'">'+m.n+'</div>'
-      +'<div style="font-size:11px;color:#999;margin-top:3px;line-height:1.4">'+m.d+'</div></div>'
-      +'<button onclick="event.stopPropagation();openFlowPicker('+i+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
-      +'<div class="chk'+(ok?' ok':'')+'" onclick="tapEx2(\''+id+'\')">✓</div></div>';
-  }
+  h+='<div class="card" style="border-color:#3A3A3A">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
+    +'<div style="font-size:14px;font-weight:700">🌊 '+FLOW_FMT_LABELS[session.fmt]+'</div>'
+    +'<button onclick="openFlowPicker()" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif">🔀</button></div>'
+    +'<div style="font-size:11px;color:#999;line-height:1.6">Explora y enlaza estos movimientos con fluidez, sin pausas largas entre ellos. ~'+session.totalMin+' min en total. No es movilidad ni series tradicionales — es movimiento.</div></div>';
+  session.blocks.forEach(function(b,bi){
+    h+='<div class="slbl">'+b.title+(b.note?' <span style="font-weight:400;color:#999;font-size:11px">· '+b.note+'</span>':'')+'</div>';
+    b.moves.forEach(function(m,mi){
+      const id='mc_'+bi+'_'+mi;const ok=ST.done.has(id);
+      h+='<div class="exc'+(ok?' ok':'')+'" onclick="tapEx2(\''+id+'\')" style="margin-bottom:6px">'
+        +'<div style="flex:1"><div class="xn'+(ok?' ok':'')+'">'+m.text+'</div>'
+        +(m.desc?('<div style="font-size:11px;color:#999;margin-top:3px;line-height:1.4">'+m.desc+'</div>'):'')+'</div>'
+        +'<div class="chk'+(ok?' ok':'')+'">✓</div></div>';
+    });
+  });
   h+='<button class="btn btn-blue" style="margin-top:2px" onclick="runFlowTimer()">▶ Iniciar Flow</button>';
-  const cxId='mc_complex';const cxOk=ST.done.has(cxId);
-  h+='<div class="exc'+(cxOk?' ok':'')+'" onclick="tapEx2(\''+cxId+'\')" style="margin-bottom:0;margin-top:10px">'
-    +'<div style="flex:1"><div class="xn'+(cxOk?' ok':'')+'">💪 Complejo KB 12kg <span style="font-size:10px;color:#999;font-weight:400">(opcional, añádelo dentro de los 15-25 min)</span></div>'
-    +'<div style="font-size:11px;color:#666;margin-top:3px">'+complex+'</div></div>'
-    +'<div class="chk'+(cxOk?' ok':'')+'">✓</div></div>'
-    +'</div>';
-  h+='<div class="slbl">Core (McGill)</div>';
+  h+='<div class="slbl">Core (McGill) + salud lumbar</div>';
   CORE_MAIN.forEach(function(ex){
     const ok=ST.done.has(ex.id);const side=ex.perSide?'/lado':'';
     h+='<div class="exc'+(ok?' ok':'')+'" onclick="tapEx2(\''+ex.id+'\')">'
@@ -1117,6 +1220,7 @@ function rTab(){
   if(ST.tab==='prog')return rProg();
   if(ST.tab==='cal')return rCal();
   if(ST.tab==='rc')return rRc();
+  if(ST.tab==='postura')return rPostura();
   if(ST.tab==='medidas')return rMedidas();
   if(ST.tab==='cfg')return rCfg();
   return rHoy();
@@ -1135,6 +1239,15 @@ function rHoy(){
     +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Movilidad matutina</div>'
     +'<div style="font-size:11px;color:#999">'+mobDone+'/'+MOB.length+' completados</div></div>'
     +'<div class="chk'+(mobAllDone?' ok':'')+'" onclick="event.stopPropagation();completeAllMob()" style="margin-top:0">✓</div>'
+    +'<div style="font-size:18px;color:#999">›</div></div>';
+
+  const posturaDone=POSTURA.filter(function(ex){return ST.done.has(ex.id);}).length;
+  const posturaAllDone=posturaDone===POSTURA.length;
+  h+='<div class="card" style="display:flex;align-items:center;gap:10px;cursor:pointer;border-color:rgba(0,122,255,0.2)" onclick="showPostura()">'
+    +'<div style="width:36px;height:36px;border-radius:10px;background:rgba(0,122,255,0.08);display:flex;align-items:center;justify-content:center;font-size:18px">🧍</div>'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600">Zona Postura</div>'
+    +'<div style="font-size:11px;color:#999">'+posturaDone+'/'+POSTURA.length+' · 6-8 min</div></div>'
+    +'<div class="chk'+(posturaAllDone?' ok':'')+'" onclick="event.stopPropagation();markCompletedPostura()" style="margin-top:0">✓</div>'
     +'<div style="font-size:18px;color:#999">›</div></div>';
 
   if(sk){
@@ -1227,6 +1340,35 @@ function completeAllMob(){
 }
 
 // ── RECOVERY ───────────────────────────────────────
+function showPostura(){ST.tab='postura';sH(rPostura(),'forward');}
+function rPostura(){
+  let h='<div class="slbl">Zona Postura</div>';
+  h+='<div class="card" style="border-color:rgba(0,122,255,0.2)"><div style="font-size:11px;color:#999;line-height:1.6">6-8 min diarios. Movilidad + control + activación ligera — nunca al fallo, nunca debe doler. La técnica manda sobre la amplitud o las repeticiones.</div></div>';
+  POSTURA.forEach(function(ex){
+    const ok=ST.done.has(ex.id);
+    h+='<div class="exc'+(ok?' ok':'')+'" onclick="tapEx2(\''+ex.id+'\')">'
+      +'<div style="flex:1"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="xn'+(ok?' ok':'')+'">'+ex.n+'</div>'
+      +'<div class="xr" style="color:#007AFF">'+ex.reps+'</div></div>'
+      +'<div style="font-size:11px;color:#999;margin-top:3px;line-height:1.4">'+ex.desc+'</div></div>'
+      +'<div class="chk'+(ok?' ok':'')+'">✓</div></div>';
+  });
+  const extra=gl('postura2_'+tstr)==='1';
+  h+='<div class="card" style="cursor:pointer;display:flex;align-items:center;gap:10px" onclick="togglePostura2()">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:600">+ 2ª serie hoy</div>'
+    +'<div style="font-size:11px;color:#999;margin-top:2px">Rotación externa con banda — 2-3 días/semana, no a diario</div></div>'
+    +'<div class="chk'+(extra?' ok':'')+'">✓</div></div>';
+  const comp=gl('completed_postura_'+tstr);
+  h+='<button class="btn '+(comp?'btn-green':'btn-blue')+'" style="margin-top:10px" onclick="markCompletedPostura()">'
+    +(comp?'✓ Completado — pulsa para desmarcar':'✅ Completar todo')+'</button>';
+  return h;
+}
+function togglePostura2(){const k='postura2_'+tstr;if(gl(k))localStorage.removeItem(k);else sv(k,'1');sH(rTab());}
+function markCompletedPostura(){
+  const key='completed_postura_'+tstr;
+  if(gl(key)){localStorage.removeItem(key);POSTURA.forEach(function(ex){ST.done.delete(ex.id);});sv('dn_'+tstr,JSON.stringify([...ST.done]));}
+  else{POSTURA.forEach(function(ex){ST.done.add(ex.id);});sv('dn_'+tstr,JSON.stringify([...ST.done]));sv(key,'1');showCel('🧍','¡Zona Postura completada!');}
+  sH(rTab());
+}
 function showRc(type){ST._rc=type;ST.tab='rc';sH(rRc());}
 function rRc(){
   const type=ST._rc||'all';
@@ -1437,11 +1579,13 @@ function rCal(){
   for(let d=1;d<=days;d++){
     const ds=new Date(y,m,d).toDateString();const isT=ds===tstr;
     const sport=gl('sport_'+ds);const mob=gl('mob_completed_'+ds)||gl('md_'+ds);
+    const postura=gl('completed_postura_'+ds);
     const train=gl('completed_'+ds);const trainDef=train&&SESSDEF[train]?SESSDEF[train]:null;
     const isFuture=new Date(y,m,d)>today;
     const dots=[];
     if(trainDef)dots.push(trainDef.color);
     if(mob)dots.push('#34C759');
+    if(postura)dots.push('#5AC8FA');
     if(sport)dots.push('#FF3B30');
     h+='<div class="cal-d'+(isT?' today':'')+'" onclick="'+(isFuture?'':'calDay(\''+ds+'\')')+'" style="'+(isFuture?'opacity:.35':'cursor:pointer')+'">'
       +'<div class="cal-dn" style="font-weight:'+(isT?'800':'400')+';color:'+(isT?'#007AFF':'')+'">'+d+'</div>'
@@ -1451,6 +1595,7 @@ function rCal(){
   h+='<div style="display:flex;gap:12px;padding:14px 2px;flex-wrap:wrap">';
   h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#999"></div><div style="font-size:10px;color:#999">Entrenamiento</div></div>';
   h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#34C759"></div><div style="font-size:10px;color:#999">Movilidad</div></div>';
+  h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#5AC8FA"></div><div style="font-size:10px;color:#999">Postura</div></div>';
   h+='<div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#FF3B30"></div><div style="font-size:10px;color:#999">Deporte</div></div></div>';
   return h;
 }
@@ -1479,6 +1624,12 @@ function calDay(ds){
     +'<div style="width:10px;height:10px;border-radius:50%;background:#34C759"></div>'
     +'<div style="flex:1;font-size:13px;font-weight:'+(mob?'700':'400')+';color:'+(mob?'#1a7a38':'#111')+'">Movilidad matutina</div>'
     +(mob?'<span style="color:#34C759">✓</span>':'')+'</div></div>';
+  const postura=gl('completed_postura_'+ds);
+  h+='<div class="card"><div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Zona Postura</div>'
+    +'<div onclick="toggleCalPostura(\''+ds+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:'+(postura?'rgba(90,200,250,0.1)':'rgba(0,0,0,0.03)')+';cursor:pointer;border:1px solid '+(postura?'rgba(90,200,250,0.35)':'rgba(0,0,0,0.06)')+'">'
+    +'<div style="width:10px;height:10px;border-radius:50%;background:#5AC8FA"></div>'
+    +'<div style="flex:1;font-size:13px;font-weight:'+(postura?'700':'400')+';color:'+(postura?'#0a7ea8':'#111')+'">Zona Postura</div>'
+    +(postura?'<span style="color:#5AC8FA">✓</span>':'')+'</div></div>';
   if(sport){
     h+='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
       +'<div style="font-size:12px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em">Deporte</div>'
@@ -1509,6 +1660,7 @@ function setCalTrain(ds,sk){sv('completed_'+ds,sk);closeModal();calDay(ds);showC
 function deleteCalTrain(ds){localStorage.removeItem('completed_'+ds);calDay(ds);showCel('🗑','Entrenamiento eliminado');}
 function deleteCalSport(ds){localStorage.removeItem('sport_'+ds);calDay(ds);showCel('🗑','Deporte eliminado');}
  function toggleCalMob(ds){const k='mob_completed_'+ds;if(gl(k))localStorage.removeItem(k);else sv(k,'1');calDay(ds);}
+function toggleCalPostura(ds){const k='completed_postura_'+ds;if(gl(k))localStorage.removeItem(k);else sv(k,'1');calDay(ds);}
 function openSportModal(targetDs){
   if(targetDs)_sportTargetDs=targetDs;
   document.getElementById('modal-title').textContent='Registrar deporte — hoy';
@@ -1533,7 +1685,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v3.10.1</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v4.1.0</div>';
   return h;
 }
 
@@ -1594,6 +1746,7 @@ function resetApp(){
 function goBack(){
   if(document.getElementById('modal').classList.contains('show')){closeModal();return;}
   if(ST.tab==='rc'){go('hoy');return;}
+  if(ST.tab==='postura'){go('hoy');return;}
   if(ST.tab==='medidas'){go('prog');return;}
   // If in day detail in sem, close it
   const openDetail=document.querySelector('[id^="detail-"][style*="block"]');
