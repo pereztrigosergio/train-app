@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="4.1.0">
+<meta name="app-version" content="4.2.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -166,11 +166,12 @@ function todayIdx(){return today.getDay()===0?6:today.getDay()-1;}
 const SESSDEF={
   tf:{name:'Torso Fuerza',color:'#007AFF',bg:'rgba(0,122,255,0.07)'},
   pf:{name:'Pierna Fuerza',color:'#FF9500',bg:'rgba(255,149,0,0.07)'},
-  mc:{name:'Movimiento + Core',color:'#5856D6',bg:'rgba(88,86,214,0.07)'},
+  mc:{name:'Movimiento',color:'#5856D6',bg:'rgba(88,86,214,0.07)'},
   ta:{name:'Torso Atlético',color:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
   pa:{name:'Pierna Atlético',color:'#30B0C7',bg:'rgba(48,176,199,0.07)'},
+  cs:{name:'Core + Salud Lumbar',color:'#A0522D',bg:'rgba(160,82,45,0.07)'},
 };
-const DEFAULT_SCHED=['tf','pf','mc','ta','pa',null,null];
+const DEFAULT_SCHED=['tf','pf','mc','ta','pa','cs',null];
 
 const EXLIB={
   eh:{name:'Empuje horizontal',principal:true,ex:[
@@ -220,15 +221,40 @@ const TEMPLATES={
   pa:{blocks:[{pat:'hc',count:2},{pat:'rk',count:2},{pat:'gm',count:1}],metab:'medium'},
 };
 
-const CORE_MAIN=[
-  {id:'cm1',n:'Bird dog',mat:'PC',perSide:true,sets:'2-4',reps:'8-12/lado'},
-  {id:'cm2',n:'McGill curl-up',mat:'PC',sets:'2-4',reps:'10-15s'},
-  {id:'cm3',n:'Side plank',mat:'PC',perSide:true,sets:'2-4',reps:'20-40s'},
-];
-const CORE_COMP=[
-  {id:'cc1',n:'Dead bug'},{id:'cc2',n:'Pallof press'},
-  {id:'cc3',n:'Carry unilateral con kettlebell'},{id:'cc4',n:'Plancha frontal'},
-];
+// ─── CORE + SALUD LUMBAR (día independiente, 30-40min) ─
+const CORELIB={
+  antiext:{ex:[
+    {id:'ae1',n:'Dead bug',mat:'PC/banda/KB',reps:'6-12/lado',v:['Dead bug básico','Dead bug con banda','Dead bug con kettlebell']},
+    {id:'ae2',n:'Bear hold / hover',mat:'PC',reps:'15-30s',v:['Bear hold','Bear hover','Bear con desplazamiento controlado']},
+    {id:'ae3',n:'Body saw',mat:'TRX',reps:'15-30s',v:['Body saw en TRX (rango corto)','Body saw en TRX (rango completo)']},
+  ]},
+  antirot:{ex:[
+    {id:'ar1',n:'Pallof press',mat:'Banda',reps:'8-12/lado',v:['Pallof press','Pallof hold','Pallof press en split stance','Pallof press con mayor distancia al anclaje','Pallof con pasos laterales']},
+    {id:'ar2',n:'Plank drag',mat:'KB',reps:'6-10/lado',v:['Plank drag con kettlebell']},
+  ]},
+  antilat:{ex:[
+    {id:'al1',n:'Side plank',mat:'PC',reps:'20-40s/lado',v:['Side plank','Side plank con elevación de pierna']},
+    {id:'al2',n:'Suitcase',mat:'KB 12-16kg',reps:'20-40s / 8-15 pasos / 10-30m por lado',v:['Suitcase hold','Suitcase march','Suitcase carry']},
+  ]},
+  lumbopelvic:{ex:[
+    {id:'lp1',n:'Bird dog',mat:'PC/banda',reps:'6-10/lado',v:['Bird dog básico','Bird dog con banda','Bird dog con pausa','Bird dog con mayor resistencia/control']},
+    {id:'lp2',n:'McGill curl-up',mat:'PC',reps:'6-10',v:['McGill curl-up básico','McGill curl-up con progresión']},
+  ]},
+  trunkmove:{ex:[
+    {id:'tm1',n:'Reverse crunch',mat:'PC',reps:'8-15',v:['Reverse crunch']},
+    {id:'tm2',n:'KB Halo',mat:'KB 12kg',reps:'6-10/lado',v:['KB Halo']},
+    {id:'tm3',n:'KB Around the World',mat:'KB 12kg',reps:'6-10/lado',v:['KB Around the World']},
+    {id:'tm4',n:'KB Windmill',mat:'KB 12kg',reps:'5-8/lado',v:['KB Windmill']},
+    {id:'tm5',n:'Turkish Get-Up',mat:'KB 12kg',reps:'3-5/lado',v:['TGU — fases parciales','TGU completo']},
+  ]},
+};
+const CORE_CAT_META={
+  antiext:{catName:'Anti-extensión',sets:3,rest:'60-90s',note:'isométricos 15-30s'},
+  antirot:{catName:'Anti-rotación',sets:3,rest:'60-90s',note:'control sobre velocidad'},
+  antilat:{catName:'Anti-flexión lateral',sets:'2-3',rest:'30-60s',note:'calidad sobre tiempo'},
+  lumbopelvic:{catName:'Estabilidad lumbopélvica',sets:3,rest:'30-60s',note:'nunca al fallo'},
+  trunkmove:{catName:'Movimiento / control del tronco',sets:'2-3',rest:'60-90s',note:'calidad antes que fatiga'},
+};
 // ─── ZONA POSTURA (independiente del entrenamiento) ─
 const POSTURA=[
   {id:'zp1',n:'Extensión torácica',reps:'6-8',desc:'Túmbate boca arriba sobre un rulo/toalla enrollada o el borde de un banco, justo a la altura de la mitad de la espalda (no en la zona lumbar). Manos detrás de la cabeza o cruzadas en el pecho. Deja caer la cabeza y los hombros hacia atrás por encima del apoyo, arqueando solo la parte alta/media de la espalda — la zona lumbar y el abdomen se quedan quietos, sin arquearse. Sube y vuelve a bajar despacio. Si notas que arqueas la zona baja de la espalda en vez de la alta, aprieta un poco el abdomen para bloquearla.'},
@@ -794,6 +820,142 @@ function openExPicker(sk,pat,slotIdx){
   document.getElementById('modal-body').innerHTML=html;
   document.getElementById('modal').classList.add('show');
 }
+function getRotatedCoreEx(cat){
+  const lib=CORELIB[cat].ex;
+  const rnd=weekSeed('cs_'+cat);
+  return pick(lib,rnd);
+}
+function getCoreExFor(cat,fallback){
+  const saved=gl('coreexsel_'+cat);
+  if(!saved)return fallback;
+  return CORELIB[cat].ex.find(function(e){return e.id===saved;})||fallback;
+}
+function setCoreExFor(cat,exId){
+  if(exId)sv('coreexsel_'+cat,exId);else localStorage.removeItem('coreexsel_'+cat);
+  closeModal();sH(rTab());
+}
+function openCoreExPicker(cat){
+  const fallback=getRotatedCoreEx(cat);
+  const saved=gl('coreexsel_'+cat);
+  document.getElementById('modal-title').textContent='Cambiar ejercicio — '+CORE_CAT_META[cat].catName;
+  let html='<div class="opt-row" onclick="setCoreExFor(\''+cat+'\',null)">'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(!saved?'700':'400')+';color:'+(!saved?'#007AFF':'#111')+'">🔀 Auto (rota cada semana)</div>'
+    +'<div style="font-size:11px;color:#999">Ahora mismo: '+fallback.n+'</div></div>'+(!saved?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  CORELIB[cat].ex.forEach(function(ex){
+    const isC=saved===ex.id;
+    html+='<div class="opt-row" onclick="setCoreExFor(\''+cat+'\',\''+ex.id+'\')">'
+      +'<div style="flex:1"><div style="font-size:13px;font-weight:'+(isC?'700':'400')+';color:'+(isC?'#007AFF':'#111')+'">'+ex.n+'</div>'
+      +'<div style="font-size:11px;color:#999">'+ex.mat+'</div></div>'
+      +(isC?'<span style="color:#007AFF">✓</span>':'')+'</div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function getCoreDayBlocks(){
+  return Object.keys(CORELIB).map(function(cat){
+    const fallback=getRotatedCoreEx(cat);
+    const ex=getCoreExFor(cat,fallback);
+    const meta=CORE_CAT_META[cat];
+    return {cat:cat,ex:ex,catName:meta.catName,sets:meta.sets,rest:meta.rest,note:meta.note};
+  });
+}
+function tapCoreDone(cat){
+  const doneId='cs_'+cat;
+  if(ST.done.has(doneId)){
+    ST.done.delete(doneId);
+    sv('dn_'+tstr,JSON.stringify([...ST.done]));
+    checkAutoComplete();
+    sH(rTab());
+    return;
+  }
+  openCoreRepsModal(cat);
+}
+function openCoreRepsModal(cat){
+  const fallback=getRotatedCoreEx(cat);
+  const ex=getCoreExFor(cat,fallback);
+  const hist=getRepsHist(ex.id);const last=hist[0];
+  document.getElementById('modal-title').textContent=ex.n;
+  let html='<div style="padding:14px 16px">'
+    +'<div style="font-size:12px;color:#999;margin-bottom:10px">Reps/tiempo de la serie más dura'+(last?(' · última vez: '+last.reps):'')+'</div>'
+    +'<input type="number" inputmode="numeric" id="repsInput" value="'+(last?last.reps:'')+'" placeholder="reps" style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.12);font-size:20px;font-weight:700;text-align:center;font-family:-apple-system,sans-serif;margin-bottom:12px">'
+    +'<button class="btn btn-blue" style="margin:0" onclick="confirmCoreRepsAndDone(\''+cat+'\')">Guardar y marcar hecho</button>'
+    +'</div>';
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function confirmCoreRepsAndDone(cat){
+  const el=document.getElementById('repsInput');
+  const val=parseInt(el.value,10);
+  const fallback=getRotatedCoreEx(cat);
+  const ex=getCoreExFor(cat,fallback);
+  if(!isNaN(val)&&val>0){
+    const hist=getRepsHistAll();if(!hist[ex.id])hist[ex.id]=[];
+    hist[ex.id].unshift({date:new Date().toISOString(),reps:val});
+    sv('reps_hist',JSON.stringify(hist));
+  }
+  ST.done.add('cs_'+cat);
+  sv('dn_'+tstr,JSON.stringify([...ST.done]));
+  closeModal();checkAutoComplete();sH(rTab());
+}
+function renderCoreCard(b){
+  const ex=b.ex;const lv=Math.min(getLv2(ex.id),ex.v.length-1);
+  const doneId='cs_'+b.cat;const ok=ST.done.has(doneId);
+  const repsHist=getRepsHist(ex.id);const lastReps=repsHist[0]?repsHist[0].reps:null;
+  const c=SESSDEF.cs;
+  return '<div class="exc'+(ok?' ok':'')+'">'
+    +'<div style="flex:1" onclick="tapCoreDone(\''+b.cat+'\')">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">'
+    +'<div class="xn'+(ok?' ok':'')+'">'+ex.n+' <span style="font-weight:400;color:#999;font-size:11px">— '+ex.v[lv]+'</span></div>'
+    +'<div class="xr" style="color:'+c.color+'">'+b.sets+'×'+ex.reps+'</div></div>'
+    +'<div style="margin-top:4px">'
+    +'<span class="xt" style="background:'+c.bg+';color:'+c.color+'">'+b.catName+'</span>'
+    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">'+ex.mat+'</span>'
+    +'<span class="xt" style="background:rgba(0,0,0,0.04);color:#999">Nivel '+(lv+1)+'/'+ex.v.length+'</span>'
+    +(lastReps!==null?('<span class="xt" style="background:rgba(52,199,89,0.08);color:#1a7a38">Últ: '+lastReps+'</span>'):'')+'</div>'
+    +'<div style="font-size:11px;color:#999;margin-top:3px">⏱ '+b.rest+' descanso · '+b.note+'</div>'
+    +'</div>'
+    +'<button onclick="event.stopPropagation();openCoreExPicker(\''+b.cat+'\')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:5px 9px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif;align-self:flex-start;margin-top:2px">🔀</button>'
+    +'<div class="chk'+(ok?' ok':'')+'" onclick="tapCoreDone(\''+b.cat+'\')">✓</div></div>';
+}
+function rCoreDay(){
+  const blocks=getCoreDayBlocks();
+  const doneIds=blocks.map(function(b){return 'cs_'+b.cat;});
+  const doneCount=doneIds.filter(function(id){return ST.done.has(id);}).length;
+  const pct=Math.round(doneCount/doneIds.length*100);
+  const comp=gl('completed_'+tstr)==='cs';
+  const c=SESSDEF.cs;
+  let h='<div class="slbl">Core + Salud Lumbar</div>';
+  h+='<div class="card" style="border-color:'+c.color+'">'
+    +'<div style="font-size:11px;color:#999;line-height:1.6;margin-bottom:10px">30-40 min. No es un día de abdominales: trabajas resistencia a la extensión, a la rotación y a la flexión lateral, estabilidad lumbopélvica y control del tronco en movimiento. Nunca al fallo — la técnica manda.</div>'
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:5px">'
+    +'<span style="font-size:11px;color:#999">Progreso</span>'
+    +'<span style="font-size:11px;font-weight:700;color:'+c.color+'">'+doneCount+'/'+doneIds.length+'</span></div>'
+    +'<div class="pb"><div class="pf" style="width:'+pct+'%;background:'+c.color+'"></div></div></div>';
+  blocks.forEach(function(b){
+    h+='<div class="slbl">'+b.catName+'</div>';
+    h+=renderCoreCard(b);
+  });
+  h+='<button class="btn '+(comp?'btn-green':'btn-blue')+'" style="margin-top:10px" onclick="markCompletedCore()">'
+    +(comp?'✓ Completado — pulsa para desmarcar':'✅ Completar todo')+'</button>';
+  return h;
+}
+function markCompletedCore(){
+  const key='completed_'+tstr;
+  if(gl(key)==='cs'){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
+  else{
+    const blocks=getCoreDayBlocks();
+    const rhist=getRepsHistAll();
+    blocks.forEach(function(b){
+      ST.done.add('cs_'+b.cat);
+      const last=(rhist[b.ex.id]||[])[0];
+      if(last){if(!rhist[b.ex.id])rhist[b.ex.id]=[];rhist[b.ex.id].unshift({date:new Date().toISOString(),reps:last.reps});}
+    });
+    sv('reps_hist',JSON.stringify(rhist));
+    sv('dn_'+tstr,JSON.stringify([...ST.done]));sv(key,'cs');
+    showCel('💪','¡Core + Salud Lumbar completado!');
+  }
+  sH(rTab());
+}
 function getSessionBlocks(sk){
   const tpl=TEMPLATES[sk];if(!tpl)return[];const out=[];
   tpl.blocks.forEach(function(b){
@@ -825,10 +987,17 @@ function checkAutoComplete(){
   const key='completed_'+tstr;
   if(sk==='mc'){
     const session=genFlowSession(isExpress());
-    const ids=['cm1','cm2','cm3'].concat(getFlowRequiredIds(session));
+    const ids=getFlowRequiredIds(session);
     const allDone=ids.every(function(id){return ST.done.has(id);});
-    if(allDone&&gl(key)!=='mc'){sv(key,'mc');showCel('🎉','¡Movimiento + Core completado!');}
+    if(allDone&&gl(key)!=='mc'){sv(key,'mc');showCel('🎉','¡Movimiento completado!');}
     else if(!allDone&&gl(key)==='mc'){localStorage.removeItem(key);}
+    return;
+  }
+  if(sk==='cs'){
+    const ids=getCoreDayBlocks().map(function(b){return 'cs_'+b.cat;});
+    const allDone=ids.every(function(id){return ST.done.has(id);});
+    if(allDone&&gl(key)!=='cs'){sv(key,'cs');showCel('🎉','¡Core + Salud Lumbar completado!');}
+    else if(!allDone&&gl(key)==='cs'){localStorage.removeItem(key);}
     return;
   }
   if(!TEMPLATES[sk])return;
@@ -865,7 +1034,7 @@ function markCompletedMC(){
   if(gl(key)==='mc'){localStorage.removeItem(key);ST.done=new Set();sv('dn_'+tstr,'[]');}
   else{
     const session=genFlowSession(isExpress());
-    ['cm1','cm2','cm3'].concat(getFlowRequiredIds(session)).forEach(function(id){ST.done.add(id);});
+    getFlowRequiredIds(session).forEach(function(id){ST.done.add(id);});
     sv('dn_'+tstr,JSON.stringify([...ST.done]));
     sv(key,'mc');
     showCel('💪','¡Sesión completada!');
@@ -1003,8 +1172,7 @@ function runFlowTimer(){
 function rMovCore(){
   const express=isExpress();
   const session=genFlowSession(express);
-  const compExtra=pick(CORE_COMP,weekSeed('mc_core_extra'));
-  let h='<div class="slbl">Movimiento + Core</div>';
+  let h='<div class="slbl">Movimiento</div>';
   h+='<div class="card" style="border-color:#3A3A3A">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
     +'<div style="font-size:14px;font-weight:700">🌊 '+FLOW_FMT_LABELS[session.fmt]+'</div>'
@@ -1021,18 +1189,6 @@ function rMovCore(){
     });
   });
   h+='<button class="btn btn-blue" style="margin-top:2px" onclick="runFlowTimer()">▶ Iniciar Flow</button>';
-  h+='<div class="slbl">Core (McGill) + salud lumbar</div>';
-  CORE_MAIN.forEach(function(ex){
-    const ok=ST.done.has(ex.id);const side=ex.perSide?'/lado':'';
-    h+='<div class="exc'+(ok?' ok':'')+'" onclick="tapEx2(\''+ex.id+'\')">'
-      +'<div style="flex:1"><div style="display:flex;justify-content:space-between"><div class="xn'+(ok?' ok':'')+'">'+ex.n+'</div>'
-      +'<div class="xr" style="color:#3A3A3A">'+ex.sets+'×'+ex.reps+side+'</div></div></div>'
-      +'<div class="chk'+(ok?' ok':'')+'">✓</div></div>';
-  });
-  const ccId='mc_comp_'+compExtra.id;const ccOk=ST.done.has(ccId);
-  h+='<div class="exc'+(ccOk?' ok':'')+'" onclick="tapEx2(\''+ccId+'\')" style="opacity:0.85">'
-    +'<div style="flex:1"><div class="xn'+(ccOk?' ok':'')+'">'+compExtra.n+' <span style="font-size:10px;color:#999;font-weight:400">(complementario, opcional)</span></div></div>'
-    +'<div class="chk'+(ccOk?' ok':'')+'">✓</div></div>';
   const z2Id='mc_z2';const z2Ok=ST.done.has(z2Id);
   h+='<div class="slbl">Zona 2 (opcional)</div>';
   h+='<div class="exc'+(z2Ok?' ok':'')+'" onclick="tapEx2(\''+z2Id+'\')">'
@@ -1064,7 +1220,14 @@ function toggleDayDetail2(i){
   document.querySelectorAll('[id^="detail-"]').forEach(function(d){d.style.display='none';});
   const sk=ST.sched[i];
   if(!sk){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Día de descanso.</div>';}
-  else if(sk==='mc'){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Flow + Core + Zona 2 opcional.</div>';}
+  else if(sk==='mc'){det.innerHTML='<div style="font-size:12px;color:#999;padding:8px 4px">Flow + Zona 2 opcional.</div>';}
+  else if(sk==='cs'){
+    let html='<div style="padding:6px 4px">';
+    getCoreDayBlocks().forEach(function(b){
+      html+='<div style="font-size:12px;padding:3px 0;display:flex;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,0.05)"><span style="color:#444">'+b.ex.n+'</span><span style="color:'+SESSDEF.cs.color+';font-weight:600">'+b.sets+'×'+b.ex.reps+'</span></div>';
+    });
+    html+='</div>';det.innerHTML=html;
+  }
   else{
     let html='<div style="padding:6px 4px">';
     getSessionBlocks(sk).forEach(function(b){
@@ -1158,7 +1321,7 @@ function gl(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 
 function init(){
   const sc=gl('sched2');if(sc)try{ST.sched=JSON.parse(sc);}catch(e){}
-  ST.sched=ST.sched.map(function(sk){return (sk&&sk!=='mc'&&!TEMPLATES[sk])?null:sk;});
+  ST.sched=ST.sched.map(function(sk){return (sk&&sk!=='mc'&&sk!=='cs'&&!TEMPLATES[sk])?null:sk;});
   sv('sched2',JSON.stringify(ST.sched));
   const lv=gl('lvl2');if(lv)try{ST.lvl=JSON.parse(lv);}catch(e){}
   const dn=gl('dn_'+tstr);if(dn)try{ST.done=new Set(JSON.parse(dn));}catch(e){}
@@ -1229,7 +1392,7 @@ function rTab(){
 // ── HOY ───────────────────────────────────────────
 function rHoy(){
   let sk=ST.sched[todayIdx()];
-  if(sk&&sk!=='mc'&&!TEMPLATES[sk])sk=null;
+  if(sk&&sk!=='mc'&&sk!=='cs'&&!TEMPLATES[sk])sk=null;
   let h='';
   const mobDone=MOB.filter(m=>ST.mdone.has(m.id)).length;
   const mobAllDone=mobDone===MOB.length;
@@ -1270,6 +1433,7 @@ function rHoy(){
     return h;
   }
   if(sk==='mc')return h+rMovCore();
+  if(sk==='cs')return h+rCoreDay();
   return h+rSessionCard(sk);
 }
 
@@ -1443,6 +1607,24 @@ function rProg(){
           +'<button onclick="openExPicker(\''+s.sk+'\',\''+pat+'\','+s.slotIdx+')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif">🔀</button></div>';
       });
       h+='</div></div>';
+    }
+    h+='</div>';
+  });
+  h+='<div class="slbl">Core + Salud Lumbar</div>';
+  Object.keys(CORELIB).forEach(function(cat){
+    const meta=CORE_CAT_META[cat];const isOpen=!!ST.progOpen['core_'+cat];
+    h+='<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">'
+      +'<div onclick="toggleProg2(\'core_'+cat+'\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer">'
+      +'<div style="font-size:13px;font-weight:700;flex:1">'+meta.catName+'</div>'
+      +'<div style="font-size:18px;color:#999">'+(isOpen?'∧':'∨')+'</div></div>';
+    if(isOpen){
+      h+='<div style="padding:0 14px 14px">';
+      CORELIB[cat].ex.forEach(function(ex){h+=renderProgItem2(ex,true);});
+      const fallback=getRotatedCoreEx(cat);const cur=getCoreExFor(cat,fallback);
+      h+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0">'
+        +'<div style="flex:1;font-size:12px"><span style="color:'+SESSDEF.cs.color+';font-weight:600">Core + Salud Lumbar</span> · '+cur.n+'</div>'
+        +'<button onclick="openCoreExPicker(\''+cat+'\')" style="background:rgba(0,0,0,0.05);border:1px solid rgba(0,0,0,0.08);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:#555;font-family:-apple-system,sans-serif">🔀</button></div>';
+      h+='</div>';
     }
     h+='</div>';
   });
@@ -1685,7 +1867,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v4.1.0</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v4.2.0</div>';
   return h;
 }
 
