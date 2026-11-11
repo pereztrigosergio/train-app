@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="5.0.0">
+<meta name="app-version" content="5.1.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1864,7 +1864,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.0.0</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.1.0</div>';
   return h;
 }
 
@@ -1947,6 +1947,8 @@ const NEWEX={
   pj2:{id:'pj2',n:'Jump squat',mat:'PC/KB',reps:'5',v:['Jump squat peso corporal','Jump squat con KB 12kg']},
   ph1:{id:'ph1',n:'Saltos horizontales',mat:'PC',reps:'4-5',v:['Salto horizontal bilateral','Salto horizontal con recepción estable']},
   ph2:{id:'ph2',n:'Salto horizontal unilateral controlado',mat:'PC',reps:'3-4/lado',v:['Unilateral controlado']},
+  pu1:{id:'pu1',n:'Dominadas',mat:'Barra',reps:'4-10',v:['Negativas (bajada lenta)','Dominada completa','Dominada con pausa arriba','Dominada lastrada']},
+  pu2:{id:'pu2',n:'Dominadas asistidas con banda',mat:'Barra + banda',reps:'6-10',v:['Banda fuerte','Banda media','Banda suave']},
   fc1:{id:'fc1',n:'Farmer carry',mat:'KB',reps:'20-40 m',v:['KB 12kg','KB 16kg']},
   pm1:{id:'pm1',n:'Press con mancuernas (banco o suelo)',mat:'Mancuernas/KB',reps:'8-12',v:['Ligero','Medio','Tempo lento','Pausa']},
   ps1:{id:'ps1',n:'Press de hombros con mancuernas',mat:'Mancuernas/KB',reps:'8-12',v:['Ligero','Medio','Tempo lento']},
@@ -1966,15 +1968,15 @@ const PROG={
       {id:'e',label:'Extensión de cadera',sets:3,alts:['hc2','hc3']},
       {id:'a',label:'Abducción de cadera',sets:2,alts:['gm2']}],
   tt:[{id:'h',label:'Tirón horizontal',sets:4,alts:['th2','th1','tw1','th4']},
-      {id:'v',label:'Tirón vertical (alternativa)',sets:4,alts:['vj1','vj2','vj3']},
+      {id:'v',label:'Tirón vertical (alternativa)',sets:4,alts:['vj1','pu2','pu1','vj2','vj3']},
       {id:'u',label:'Espalda alta y deltoides posterior',sets:3,alts:['acc3','ru1']},
       {id:'b',label:'Bíceps supinado',sets:3,alts:['acc1','bc2']},
       {id:'n',label:'Bíceps neutro',sets:3,alts:['bm1','bm2']}],
   cs:[{id:'m',label:'McGill curl-up',sets:2,alts:['lp2']},
-      {id:'s',label:'Plancha lateral',sets:2,alts:['al1']},
-      {id:'b',label:'Bird dog',sets:2,alts:['lp1']},
-      {id:'d',label:'Dead bug',sets:2,alts:['ae1']},
-      {id:'p',label:'Pallof press',sets:2,alts:['ar1']},
+      {id:'s',label:'Plancha lateral',sets:3,alts:['al1']},
+      {id:'b',label:'Bird dog',sets:3,alts:['lp1']},
+      {id:'d',label:'Dead bug',sets:3,alts:['ae1']},
+      {id:'p',label:'Pallof press',sets:3,alts:['ar1']},
       {id:'f',label:'Farmer carry',sets:2,alts:['fc1']},
       {id:'o',label:'Halos (poco peso, sin forzar)',sets:2,alts:['tm2']}],
   lb:[{id:'v',label:'Potencia vertical',sets:3,alts:['pj1','pj2'],power:1},
