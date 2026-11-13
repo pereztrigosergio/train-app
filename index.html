@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="5.1.0">
+<meta name="app-version" content="5.2.1">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -165,12 +165,12 @@ const MOB_EXTRA={
 function todayIdx(){return today.getDay()===0?6:today.getDay()-1;}
 const SESSDEF={
   la:{name:'Pierna A · Fuerza',color:'#FF9500',bg:'rgba(255,149,0,0.07)'},
-  tt:{name:'Torso A · Tirón',color:'#007AFF',bg:'rgba(0,122,255,0.07)'},
+  tt:{name:'Tirón',color:'#007AFF',bg:'rgba(0,122,255,0.07)'},
+  te:{name:'Empuje',color:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
   cs:{name:'Core + Salud Lumbar',color:'#A0522D',bg:'rgba(160,82,45,0.07)'},
-  lb:{name:'Pierna B · Potencia',color:'#30B0C7',bg:'rgba(48,176,199,0.07)'},
-  te:{name:'Torso B · Empuje',color:'#AF52DE',bg:'rgba(175,82,222,0.07)'},
+  fb:{name:'Full body · Potencia + fuerza',color:'#30B0C7',bg:'rgba(48,176,199,0.07)'},
 };
-const DEFAULT_SCHED=['la','tt','cs','lb','te',null,null];
+const DEFAULT_SCHED=['la','tt','te','cs','fb',null,null];
 
 const EXLIB={
   eh:{name:'Empuje horizontal',principal:true,ex:[
@@ -1320,7 +1320,7 @@ function gl(k){try{return localStorage.getItem(k);}catch(e){return null;}}
 
 function init(){
   const sc=gl('sched2');if(sc)try{ST.sched=JSON.parse(sc);}catch(e){}
-  ST.sched=ST.sched.map(function(sk){return (sk&&!PROG[sk])?null:sk;});if(ST.sched.filter(Boolean).length<3)ST.sched=[...DEFAULT_SCHED];
+  ST.sched=ST.sched.map(function(sk){return (sk&&!PROG[sk])?null:sk;});if(ST.sched.filter(Boolean).length<3||gl('sched_v')!=='6'){ST.sched=[...DEFAULT_SCHED];sv('sched_v','6');}
   sv('sched2',JSON.stringify(ST.sched));
   const lv=gl('lvl2');if(lv)try{ST.lvl=JSON.parse(lv);}catch(e){}
   const dn=gl('dn_'+tstr);if(dn)try{ST.done=new Set(JSON.parse(dn));}catch(e){}
@@ -1864,7 +1864,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.1.0</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.2.1</div>';
   return h;
 }
 
@@ -1967,11 +1967,17 @@ const PROG={
       {id:'h',label:'Dominante de cadera',sets:4,alts:['hc1']},
       {id:'e',label:'Extensión de cadera',sets:3,alts:['hc2','hc3']},
       {id:'a',label:'Abducción de cadera',sets:2,alts:['gm2']}],
-  tt:[{id:'h',label:'Tirón horizontal',sets:4,alts:['th2','th1','tw1','th4']},
-      {id:'v',label:'Tirón vertical (alternativa)',sets:4,alts:['vj1','pu2','pu1','vj2','vj3']},
-      {id:'u',label:'Espalda alta y deltoides posterior',sets:3,alts:['acc3','ru1']},
-      {id:'b',label:'Bíceps supinado',sets:3,alts:['acc1','bc2']},
-      {id:'n',label:'Bíceps neutro',sets:3,alts:['bm1','bm2']}],
+  tt:[{id:'h',label:'Tirón horizontal',sets:3,alts:['th2','th1','tw1','th4']},
+      {id:'v',label:'Tirón vertical / pullover',sets:3,alts:['vj1','pu2','pu1','vj2','vj3']},
+      {id:'u',label:'Face pull / pájaros',sets:2,alts:['acc3','ru1']},
+      {id:'b',label:'Curl bíceps supinado',sets:3,alts:['acc1','bc2']},
+      {id:'n',label:'Curl martillo',sets:3,alts:['bm1','bm2']}],
+  te:[{id:'h',label:'Empuje horizontal',sets:3,alts:['eh1','pm1']},
+      {id:'v',label:'Empuje vertical',sets:3,alts:['ev1','ev2','ps1']},
+      {id:'f',label:'Fondos en paralelas',sets:3,alts:['eh2']},
+      {id:'l',label:'Elevaciones laterales',sets:3,alts:['acc4','dl2']},
+      {id:'o',label:'Tríceps sobre la cabeza',sets:2,alts:['to1']},
+      {id:'r',label:'Extensión francesa',sets:3,alts:['tf1']}],
   cs:[{id:'m',label:'McGill curl-up',sets:2,alts:['lp2']},
       {id:'s',label:'Plancha lateral',sets:3,alts:['al1']},
       {id:'b',label:'Bird dog',sets:3,alts:['lp1']},
@@ -1979,17 +1985,12 @@ const PROG={
       {id:'p',label:'Pallof press',sets:3,alts:['ar1']},
       {id:'f',label:'Farmer carry',sets:2,alts:['fc1']},
       {id:'o',label:'Halos (poco peso, sin forzar)',sets:2,alts:['tm2']}],
-  lb:[{id:'v',label:'Potencia vertical',sets:3,alts:['pj1','pj2'],power:1},
-      {id:'z',label:'Potencia horizontal',sets:3,alts:['ph1','ph2'],power:1},
+  fb:[{id:'v',label:'Potencia vertical (saltos)',sets:3,alts:['pj1','pj2'],power:1},
+      {id:'z',label:'Potencia horizontal (saltos)',sets:3,alts:['ph1','ph2'],power:1},
       {id:'k',label:'Dominante de rodilla',sets:3,alts:['rk3','rk2','rk1','rk4']},
-      {id:'h',label:'Dominante de cadera',sets:3,alts:['hc1']},
-      {id:'e',label:'Extensión de cadera',sets:3,alts:['hc2','hc3']}],
-  te:[{id:'h',label:'Empuje horizontal',sets:4,alts:['eh1','pm1']},
-      {id:'v',label:'Empuje vertical',sets:4,alts:['ev1','ev2','ps1']},
-      {id:'f',label:'Fondos en paralelas',sets:4,alts:['eh2']},
-      {id:'l',label:'Deltoides lateral',sets:3,alts:['acc4','dl2']},
-      {id:'o',label:'Tríceps sobre la cabeza',sets:2,alts:['to1']},
-      {id:'r',label:'Tríceps brazos junto al cuerpo',sets:3,alts:['tf1']}],
+      {id:'e',label:'Extensión de cadera (hip thrust)',sets:3,alts:['hc2','hc3']},
+      {id:'t',label:'Tirón horizontal o vertical',sets:3,alts:['th2','th1','tw1','th4','vj1','pu2','pu1','vj2','vj3']},
+      {id:'p',label:'Empuje horizontal o vertical',sets:3,alts:['eh1','pm1','ev1','ev2','ps1']}],
 };
 function slotEx(sk,sid){
   const s=PROG[sk].find(function(x){return x.id===sid;});
