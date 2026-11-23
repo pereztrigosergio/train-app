@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Train.">
 <meta name="theme-color" content="#FAFAFA">
-<meta name="app-version" content="5.2.1">
+<meta name="app-version" content="5.3.0">
 <title>Train.</title>
 <link rel="manifest" href="manifest.json">
 <style>
@@ -1864,7 +1864,7 @@ function rCfg(){
     +'<button class="btn btn-blue" onclick="exportData()">Exportar progreso</button>'
     +'<button class="btn" onclick="importData()">Importar progreso</button>'
     +'<button class="btn btn-red" onclick="resetApp()">Reiniciar app</button></div>';
-  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.2.1</div>';
+  h+='<div style="text-align:center;padding:16px;font-size:11px;color:#ccc">Train. v5.3.0</div>';
   return h;
 }
 
@@ -1949,6 +1949,7 @@ const NEWEX={
   ph2:{id:'ph2',n:'Salto horizontal unilateral controlado',mat:'PC',reps:'3-4/lado',v:['Unilateral controlado']},
   pu1:{id:'pu1',n:'Dominadas',mat:'Barra',reps:'4-10',v:['Negativas (bajada lenta)','Dominada completa','Dominada con pausa arriba','Dominada lastrada']},
   pu2:{id:'pu2',n:'Dominadas asistidas con banda',mat:'Barra + banda',reps:'6-10',v:['Banda fuerte','Banda media','Banda suave']},
+  sq1:{id:'sq1',n:'Sentadilla con barra',mat:'Barra + discos',reps:'6-10',v:['Sentadilla peso corporal','Con barra ligera','Con barra moderada','Con barra y pausa abajo','Con barra pesada']},
   fc1:{id:'fc1',n:'Farmer carry',mat:'KB',reps:'20-40 m',v:['KB 12kg','KB 16kg']},
   pm1:{id:'pm1',n:'Press con mancuernas (banco o suelo)',mat:'Mancuernas/KB',reps:'8-12',v:['Ligero','Medio','Tempo lento','Pausa']},
   ps1:{id:'ps1',n:'Press de hombros con mancuernas',mat:'Mancuernas/KB',reps:'8-12',v:['Ligero','Medio','Tempo lento']},
@@ -1963,7 +1964,7 @@ function exById(id){
   return null;
 }
 const PROG={
-  la:[{id:'k',label:'Dominante de rodilla',sets:4,alts:['rk1','rk3','rk2','rk4']},
+  la:[{id:'k',label:'Dominante de rodilla',sets:4,alts:['rk1','sq1','rk3','rk2','rk4']},
       {id:'h',label:'Dominante de cadera',sets:4,alts:['hc1']},
       {id:'e',label:'Extensión de cadera',sets:3,alts:['hc2','hc3']},
       {id:'a',label:'Abducción de cadera',sets:2,alts:['gm2']}],
@@ -1987,7 +1988,7 @@ const PROG={
       {id:'o',label:'Halos (poco peso, sin forzar)',sets:2,alts:['tm2']}],
   fb:[{id:'v',label:'Potencia vertical (saltos)',sets:3,alts:['pj1','pj2'],power:1},
       {id:'z',label:'Potencia horizontal (saltos)',sets:3,alts:['ph1','ph2'],power:1},
-      {id:'k',label:'Dominante de rodilla',sets:3,alts:['rk3','rk2','rk1','rk4']},
+      {id:'k',label:'Dominante de rodilla',sets:3,alts:['rk3','sq1','rk2','rk1','rk4']},
       {id:'e',label:'Extensión de cadera (hip thrust)',sets:3,alts:['hc2','hc3']},
       {id:'t',label:'Tirón horizontal o vertical',sets:3,alts:['th2','th1','tw1','th4','vj1','pu2','pu1','vj2','vj3']},
       {id:'p',label:'Empuje horizontal o vertical',sets:3,alts:['eh1','pm1','ev1','ev2','ps1']}],
